@@ -40,6 +40,7 @@ cdef extern from "xmmsc/xmmsc_idnumbers.h":
 		XMMS_COLLECTION_TYPE_QUEUE
 		XMMS_COLLECTION_TYPE_PARTYSHUFFLE
 
+<<<<<<< HEAD:src/clients/lib/python/xmmsapi.pyx
 
 
 # The following constants are meant for interpreting the return value of
@@ -53,6 +54,8 @@ OBJECT_CMD_ARG_LIST = XMMSV_TYPE_LIST
 OBJECT_CMD_ARG_BIN = XMMSV_TYPE_BIN
 OBJECT_CMD_ARG_COLL = XMMSV_TYPE_COLL
 
+=======
+>>>>>>> aaa8650... even more python stuff, now works a bit:src/clients/lib/python/xmmsapi.pyx
 cdef extern from "xmmsc/xmmsc_idnumbers.h":
 	ctypedef enum xmms_playback_status_t:
 		XMMS_PLAYBACK_STATUS_STOP,
@@ -87,6 +90,16 @@ cdef extern from "xmmsc/xmmsc_idnumbers.h":
 		XMMS_COLLECTION_CHANGED_RENAME,
 		XMMS_COLLECTION_CHANGED_REMOVE
 
+	ctypedef enum xmmsv_type_t:
+		XMMSV_TYPE_NONE,
+		XMMSV_TYPE_ERROR,
+		XMMSV_TYPE_UINT32,
+		XMMSV_TYPE_INT32,
+		XMMSV_TYPE_STRING,
+		XMMSV_TYPE_COLL,
+		XMMSV_TYPE_BIN,
+		XMMSV_TYPE_LIST,
+		XMMSV_TYPE_DICT,
 cdef extern from "xmms_configuration.h":
 	cdef enum:
 		XMMS_PATH_MAX
@@ -121,16 +134,18 @@ COLLECTION_CHANGED_UPDATE = XMMS_COLLECTION_CHANGED_UPDATE
 COLLECTION_CHANGED_RENAME = XMMS_COLLECTION_CHANGED_RENAME
 COLLECTION_CHANGED_REMOVE = XMMS_COLLECTION_CHANGED_REMOVE
 
+VALUE_TYPE_NONE = XMMSV_TYPE_NONE
+VALUE_TYPE_ERROR = XMMSV_TYPE_ERROR
+VALUE_TYPE_UINT32 = XMMSV_TYPE_UINT32
+VALUE_TYPE_INT32 = XMMSV_TYPE_INT32
+VALUE_TYPE_STRING = XMMSV_TYPE_STRING
+VALUE_TYPE_COLL = XMMSV_TYPE_COLL
+VALUE_TYPE_BIN = XMMSV_TYPE_BIN
+VALUE_TYPE_LIST = XMMSV_TYPE_LIST
+VALUE_TYPE_DICT = XMMSV_TYPE_DICT
+
 cdef extern from "xmmsclient/xmmsclient.h":
-	ctypedef enum xmmsv_type_t:
-		XMMSV_TYPE_NONE,
-		XMMSV_TYPE_UINT32,
-		XMMSV_TYPE_INT32,
-		XMMSV_TYPE_STRING,
-		XMMSV_TYPE_DICT
-		XMMSV_TYPE_PROPDICT
-		XMMSV_TYPE_BIN
-		XMMSV_TYPE_COLL
+
 
 	ctypedef enum xmmsc_result_type_t:
 		XMMSC_RESULT_CLASS_DEFAULT,
@@ -143,13 +158,13 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	ctypedef struct xmmsv_coll_t
 	ctypedef struct xmmsv_t
 	ctypedef struct xmmsv_list_iter_t
-	ctypedef void (*xmmsc_result_notifier_t)(xmmsc_result_t *res, void *user_data)
+	ctypedef int (*xmmsc_result_notifier_t) (xmmsv_t *val, void *user_data)
 	ctypedef void (*xmmsc_user_data_free_func_t) (void *user_data)
 	ctypedef void (*xmmsc_io_need_out_callback_func_t) (int, void*)
 	ctypedef void (*xmmsc_disconnect_func_t) (void *user_data)
 
 
-	xmmsc_result_t *xmmsc_result_restart(xmmsc_result_t *res)
+	xmmsv_t *xmmsc_result_get_value(xmmsc_result_t *res)
 	void xmmsc_result_ref(xmmsc_result_t *res)
 	void xmmsc_result_unref(xmmsc_result_t *res)
 	void xmmsc_result_notifier_set_full(xmmsc_result_t *res, xmmsc_result_notifier_t func, void *user_data, xmmsc_user_data_free_func_t free_func)
@@ -403,20 +418,11 @@ cdef foreach_source_hash(char *key, xmmsv_type_t typ, void *value, char *source,
 
 	udata[(source,key)]=v
 
-cdef foreach_hash(char *key, xmmsv_type_t typ, void *value, udata):
-	if typ == XMMSV_TYPE_STRING:
-		v = to_unicode(<char *>value)
-	elif typ == XMMSV_TYPE_UINT32:
-		v = <unsigned int>value
-	elif typ == XMMSV_TYPE_INT32:
-		v = <int>value
-
-	udata[key]=v
-
-cdef void ResultNotifier(xmmsc_result_t *res, void *o):
+cdef int ResultNotifier(xmmsv_t *res, void *o):
 	cdef object obj
 	obj = <object> o
-	obj._cb()
+	ret = obj._cb()
+	return ret
 
 cdef void ObjectFreeer(void *o):
 	cdef object obj
@@ -440,7 +446,6 @@ cdef class Collection:
 		if self.coll != NULL:
 			xmmsv_coll_unref (self.coll)
 		self.coll = NULL
-
 
 	def __getattr__(self, name):
 		if name == 'attributes':
@@ -831,70 +836,6 @@ def coll_parse(pattern):
 		raise ValueError('unable to parse pattern')
 	return create_coll(coll)
 
-cdef class XMMSResult:
-	"""
-	Class containing the results of some operation
-	"""
-	cdef xmmsc_result_t *res
-	cdef object notifier
-	cdef object callback
-	cdef object c
-	cdef object exc
-	cdef int want_restart
-
-	def __cinit__(self, c):
-		self.c = c
-		self.exc = None
-
-	def more_init(self):
-		pass
-
-	#def more_init(self):
-	#	if self.callback:
-	#		Py_INCREF(self)
-	#		xmmsc_result_notifier_set_full(self.res, ResultNotifier, <void *>self, ObjectFreeer)
-	#		xmmsc_result_unref(self.res)
-
-	#def _cb(self):
-	#	cdef xmmsc_result_t *r
-	#	self._check()
-	#	if not self.callback:
-	#		return
-	#	self.want_restart = 0
-	#	try:
-	#		self.callback(self)
-	#	except:
-	#		exc = sys.exc_info()
-	#		traceback.print_exception (exc[0], exc[1], exc[2])
-	#	if self.want_restart:
-	#		r = self.res
-	#		self.res = xmmsc_result_restart(self.res)
-	#		xmmsc_result_unref(r)
-	#		xmmsc_result_unref(self.res)
-	#	elif xmmsc_result_get_class(self.res) != XMMSC_RESULT_CLASS_BROADCAST:
-	#		self._unref()
-
-
-
-	def _check(self):
-		if not self.res:
-			raise ValueError("The resultset did not contain a reply!")
-
-	def wait(self):
-		"""
-		Wait for the result from the daemon.
-		"""
-		self._check()
-		#xmmsc_result_wait(self.res)
-		if self.exc is not None:
-			raise self.exc[0], self.exc[1], self.exc[2]
-
-	def disconnect(self):
-		if xmmsc_result_get_class(self.res) == XMMSC_RESULT_CLASS_DEFAULT:
-			raise ValueError("Can only disconnect signals and broadcasts")
-		xmmsc_result_disconnect(self.res)
-
-
 cdef class XMMSValue:
 	cdef xmmsv_t *val
 
@@ -903,8 +844,6 @@ cdef class XMMSValue:
 		Return the type of data contained in this result.
 		The return value is one of the OBJECT_CMD_ARG_* constants.
 		"""
-		self._check ()
-	
 		return xmmsv_get_type(self.val)
 
 	def _value(self):
@@ -998,7 +937,6 @@ cdef class XMMSValue:
 		"""
 		@return: A dictionary containing media info.
 		"""
-		
 		ret = {}
 		if not xmmsv_dict_foreach(self.val, <xmmsv_dict_foreach_func> foreach_hash, <void *>ret):
 			raise ValueError("Failed to retrieve value!")
@@ -1010,7 +948,7 @@ cdef class XMMSValue:
 	#	"""
 	#	ret = PropDict(self.c.get_source_preference())
 	#	return ret
-			
+
 	def get_list (self) :
 		"""
 		@return: A list of dicts from the result structure.
@@ -1046,18 +984,97 @@ cdef class XMMSValue:
 		else:
 			raise ValueError("Failed to retrieve value!")
 
-	def _unref(self):
-		cdef xmmsv_t *value
-		if self.val:
-			value = self.val
-			self.val = NULL
-			xmmsv_unref(value)
+	#def _unref(self):
+	#	cdef xmmsv_t *value
+	#	if self.val:
+	#		value = self.val
+	#		self.val = NULL
+	#		xmmsv_unref(value)
 
-	def __dealloc__(self):
+	#def __dealloc__(self):
+	#	"""
+	#	Deallocate the result.
+	#	"""
+	#	self._unref()
+
+cdef foreach_hash(char *key, xmmsv_t *value, udata):
+	cdef XMMSValue val
+
+	val = XMMSValue()
+	val.val = value
+
+	udata[key]=val.value()
+
+cdef class XMMSResult:
+	"""
+	Class containing the results of some operation
+	"""
+	cdef xmmsc_result_t *res
+	cdef object notifier
+	cdef object callback
+	cdef object c
+	cdef object exc
+	cdef int want_restart
+
+	def __cinit__(self, c):
+		self.c = c
+		self.exc = None
+
+	def more_init(self):
+		if self.callback:
+			Py_INCREF(self)
+			xmmsc_result_notifier_set_full(self.res, ResultNotifier, <void *>self, ObjectFreeer)
+			xmmsc_result_unref(self.res)
+
+	def _cb(self):
+		if not self.callback:
+			return
+		try:
+			ret = self.callback(self.value())
+		except:
+			exc = sys.exc_info()
+			traceback.print_exception (exc[0], exc[1], exc[2])
+
+		if ret:
+			return True
+		else:
+			return False
+
+	def wait(self):
 		"""
-		Deallocate the result.
+		Wait for the result from the daemon.
 		"""
-		self._unref()
+		xmmsc_result_wait(self.res)
+		if self.exc is not None:
+			raise self.exc[0], self.exc[1], self.exc[2]
+
+	def value(self):
+		cdef XMMSValue ret
+
+		ret = XMMSValue()
+		ret.val = xmmsc_result_get_value (self.res)
+
+		return ret
+
+	# TODO: not in xmmsclient.h any longer, bug?
+	#def disconnect(self):
+	#	if xmmsc_result_get_class(self.res) == XMMSC_RESULT_CLASS_DEFAULT:
+	#		raise ValueError("Can only disconnect signals and broadcasts")
+	#	xmmsc_result_disconnect(self.res)
+
+	# TODO: Lets leak a bit!
+	#def _unref(self):
+	#	cdef xmmsc_result_t *res
+	#	if self.res:
+	#		res = self.res
+	#		self.res = NULL
+	#		xmmsc_result_unref(res)
+	#
+	#def __dealloc__(self):
+	#	"""
+	#	Deallocate the result.
+	#	"""
+	#	self._unref()
 
 cdef void python_need_out_fun(int i, void *obj):
 	cdef object o
@@ -1080,8 +1097,6 @@ def userconfdir_get():
 	if xmmsc_userconfdir_get (path, XMMS_PATH_MAX) == NULL:
 		return None
 	return path
-
-
 
 cdef class XMMS:
 	"""
@@ -1404,8 +1419,8 @@ cdef class XMMS:
 		ret = XMMSResult(self)
 		ret.callback = cb
 		
-		#ret.res = r
-		#ret.more_init()
+		ret.res = r
+		ret.more_init()
 
 		return ret
 		
