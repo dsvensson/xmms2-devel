@@ -40,22 +40,6 @@ cdef extern from "xmmsc/xmmsc_idnumbers.h":
 		XMMS_COLLECTION_TYPE_QUEUE
 		XMMS_COLLECTION_TYPE_PARTYSHUFFLE
 
-<<<<<<< HEAD:src/clients/lib/python/xmmsapi.pyx
-
-
-# The following constants are meant for interpreting the return value of
-# XMMSResult.get_type ()
-OBJECT_CMD_ARG_NONE = XMMSV_TYPE_NONE
-OBJECT_CMD_ARG_UINT32 = XMMSV_TYPE_UINT32
-OBJECT_CMD_ARG_INT32 = XMMSV_TYPE_INT32
-OBJECT_CMD_ARG_STRING = XMMSV_TYPE_STRING
-OBJECT_CMD_ARG_DICT = XMMSV_TYPE_DICT
-OBJECT_CMD_ARG_LIST = XMMSV_TYPE_LIST
-OBJECT_CMD_ARG_BIN = XMMSV_TYPE_BIN
-OBJECT_CMD_ARG_COLL = XMMSV_TYPE_COLL
-
-=======
->>>>>>> aaa8650... even more python stuff, now works a bit:src/clients/lib/python/xmmsapi.pyx
 cdef extern from "xmmsc/xmmsc_idnumbers.h":
 	ctypedef enum xmms_playback_status_t:
 		XMMS_PLAYBACK_STATUS_STOP,
@@ -169,7 +153,7 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	void xmmsc_result_unref(xmmsc_result_t *res)
 	void xmmsc_result_notifier_set_full(xmmsc_result_t *res, xmmsc_result_notifier_t func, void *user_data, xmmsc_user_data_free_func_t free_func)
 	void xmmsc_result_wait(xmmsc_result_t *res)
-	int xmmsv_is_error(xmmsv_t *res)
+	int xmmsv_iserror(xmmsv_t *res)
 	xmmsv_type_t xmmsv_get_type(xmmsv_t *res)
 	xmmsc_result_type_t xmmsc_result_get_class(xmmsc_result_t *res)
 	void xmmsv_unref(xmmsv_t *value)
@@ -187,6 +171,24 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	int xmmsc_result_get_dict_entry(xmmsc_result_t *res, char *key, char **r)
 	int xmmsv_dict_foreach(xmmsv_t *value, xmmsv_dict_foreach_func func, void *user_data)
 
+	int xmmsv_dict_get (xmmsv_t *dictv, char *key, xmmsv_t **val)
+	int xmmsv_dict_insert (xmmsv_t *dictv, char *key, xmmsv_t *val)
+	int xmmsv_dict_remove (xmmsv_t *dictv, char *key)
+	int xmmsv_dict_clear (xmmsv_t *dictv)
+	int xmmsv_dict_foreach (xmmsv_t *dictv, xmmsv_dict_foreach_func func, void *user_data)
+	int xmmsv_dict_get_size (xmmsv_t *dictv)
+
+	ctypedef struct xmmsv_dict_iter_t
+
+	int  xmmsv_dict_iter_pair (xmmsv_dict_iter_t *it, char **key, xmmsv_t **val)
+	int  xmmsv_dict_iter_valid (xmmsv_dict_iter_t *it)
+	void xmmsv_dict_iter_first (xmmsv_dict_iter_t *it)
+	void xmmsv_dict_iter_next (xmmsv_dict_iter_t *it)
+	int  xmmsv_dict_iter_seek (xmmsv_dict_iter_t *it, char *key)
+
+	int  xmmsv_dict_iter_set (xmmsv_dict_iter_t *it, xmmsv_t *val)
+	int  xmmsv_dict_iter_remove (xmmsv_dict_iter_t *it)
+
 	int  xmmsv_is_list(xmmsv_t *res)
 	int  xmmsv_get_list_iter (xmmsv_t *val, xmmsv_list_iter_t **it)
 	int  xmmsv_list_iter_entry (xmmsv_list_iter_t *it, xmmsv_t **val)
@@ -197,6 +199,26 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	int  xmmsv_list_iter_insert (xmmsv_list_iter_t *it, xmmsv_t *val)
 	int  xmmsv_list_iter_remove (xmmsv_list_iter_t *it)
 
+	ctypedef void (*xmmsv_list_foreach_func) (xmmsv_t *value, void *user_data)
+
+	int xmmsv_list_get (xmmsv_t *listv, int pos, xmmsv_t **val)
+	int xmmsv_list_append (xmmsv_t *listv, xmmsv_t *val)
+	int xmmsv_list_insert (xmmsv_t *listv, int pos, xmmsv_t *val)
+	int xmmsv_list_remove (xmmsv_t *listv, int pos)
+	int xmmsv_list_clear (xmmsv_t *listv)
+	int xmmsv_list_foreach (xmmsv_t *listv, xmmsv_list_foreach_func func, void* user_data)
+	int xmmsv_list_get_size (xmmsv_t *listv)
+
+	xmmsv_t *xmmsv_new_none ()
+	xmmsv_t *xmmsv_new_error (char *errstr)
+	xmmsv_t *xmmsv_new_int (int i)
+	xmmsv_t *xmmsv_new_uint (unsigned int u)
+	xmmsv_t *xmmsv_new_string (char *s)
+	xmmsv_t *xmmsv_new_coll (xmmsv_coll_t *coll)
+	xmmsv_t *xmmsv_new_bin (unsigned char *data, unsigned int len)
+
+	xmmsv_t *xmmsv_new_list ()
+	xmmsv_t *xmmsv_new_dict ()
 
 	xmmsc_connection_t *xmmsc_init(char *clientname)
 	void xmmsc_disconnect_callback_set(xmmsc_connection_t *c, xmmsc_disconnect_func_t callback, void *userdata)
@@ -353,7 +375,7 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	int xmmsv_coll_operand_list_next (xmmsv_coll_t *)
 	int xmmsv_coll_operand_list_save (xmmsv_coll_t *)
 	int xmmsv_coll_operand_list_restore (xmmsv_coll_t *)
-	
+
 	void xmmsv_coll_attribute_set (xmmsv_coll_t *coll, char *key, char *value)
 	int xmmsv_coll_attribute_remove (xmmsv_coll_t *coll, char *key)
 	int xmmsv_coll_attribute_get (xmmsv_coll_t *coll, char *key, char **value)
@@ -363,6 +385,21 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	void xmmsv_coll_attribute_list_next (xmmsv_coll_t *coll)
 
 
+	ctypedef struct xmmsc_service_t
+	ctypedef xmmsv_t* (*xmmsc_service_notifier_t) (xmmsc_connection_t *conn, xmmsc_service_t *svc, char *method, xmmsv_t *args, void *udata)
+
+	xmmsc_service_t *xmmsc_service_new (char *name, char *desc, unsigned int major, unsigned int minor)
+	void xmmsc_service_unref (xmmsc_service_t *svc)
+	int xmmsc_service_method_add (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, ...)
+	int xmmsc_service_method_add_full (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, xmmsc_user_data_free_func_t ufree, ...)
+	int xmmsc_service_method_add_noarg (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, xmmsc_user_data_free_func_t ufree)
+	int xmmsc_service_method_add_arg (xmmsc_service_t *svc, char *name, xmmsv_type_t type, int optional)
+	xmmsc_result_t *xmmsc_service_register (xmmsc_connection_t *conn, xmmsc_service_t *svc)
+	xmmsc_result_t *xmmsc_service_unregister (xmmsc_connection_t *conn, xmmsc_service_t *svc)
+	xmmsc_result_t *xmmsc_service_list (xmmsc_connection_t *conn)
+	xmmsc_result_t *xmmsc_service_describe (xmmsc_connection_t *conn, char *service)
+	xmmsc_result_t *xmmsc_service_query (xmmsc_connection_t *conn, char *svc, char *meth, xmmsv_t *args)
+	xmmsc_result_t *xmmsc_service_shutdown (xmmsc_connection_t *conn, char *service)
 
 #####################################################################
 
@@ -839,6 +876,12 @@ def coll_parse(pattern):
 cdef class XMMSValue:
 	cdef xmmsv_t *val
 
+	def __cinit__(self, val=None):
+		if isinstance(val, int):
+			self.val = xmmsv_new_int(val)
+		#elif isinstance(val, basestring):
+		#	self.val = xmmsv_new_string(from_unicode(basestring))
+
 	def get_type(self):
 		"""
 		Return the type of data contained in this result.
@@ -862,6 +905,12 @@ cdef class XMMSValue:
 			return self.get_bin()
 		elif typ == XMMSV_TYPE_COLL:
 			return self.get_coll()
+		elif typ == XMMSV_TYPE_NONE:
+			return None
+		elif typ == XMMSV_TYPE_ERROR:
+			return self.get_error()
+		else:
+			raise TypeError("Unknown type returned from the server: %d." % typ)
 
 	def value(self):
 		"""
@@ -942,26 +991,22 @@ cdef class XMMSValue:
 			raise ValueError("Failed to retrieve value!")
 		return ret
 
-	#def get_propdict(self):
-	#	"""
-	#	@return: A source dict.
-	#	"""
-	#	ret = PropDict(self.c.get_source_preference())
-	#	return ret
-
 	def get_list (self) :
 		"""
 		@return: A list of dicts from the result structure.
 		"""
 		ret = []
 
+		cdef XMMSValue value
 		cdef xmmsv_list_iter_t *iter
 		cdef xmmsv_t *val
-
-		xmmsv_get_list_iter (self.val, &iter)
+		print "length is: %d" % xmmsv_list_get_size(self.val)
+		xmmsv_get_list_iter(self.val, &iter)
 		while xmmsv_list_iter_valid(iter):
 			xmmsv_list_iter_entry(iter, &val)
-			ret.append(self._value())
+			value = XMMSValue()
+			value.val = val
+			ret.append(value.value())
 			xmmsv_list_iter_next(iter)
 		return ret
 
@@ -970,7 +1015,7 @@ cdef class XMMSValue:
 		@return: Whether the result represents an error or not.
 		@rtype: Boolean
 		"""
-		return xmmsv_is_error(self.val)
+		return xmmsv_iserror(self.val)
 
 	def get_error(self):
 		"""
@@ -1097,6 +1142,100 @@ def userconfdir_get():
 	if xmmsc_userconfdir_get (path, XMMS_PATH_MAX) == NULL:
 		return None
 	return path
+
+"""
+int xmmsc_service_method_add (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, ...)
+int xmmsc_service_method_add_full (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, xmmsc_user_data_free_func_t ufree, ...)
+int xmmsc_service_method_add_noarg (xmmsc_service_t *svc, char *name, char *desc, xmmsv_type_t rettype, xmmsc_service_notifier_t func, void *udata, xmmsc_user_data_free_func_t ufree)
+int xmmsc_service_method_add_arg (xmmsc_service_t *svc, char *name, xmmsv_type_t type, int optional)
+"""
+
+#ctypedef xmmsv_t* (*xmmsc_service_notifier_t) (xmmsc_connection_t *conn, xmmsc_service_t *svc, char *method, xmmsv_t *args, void *udata)
+cdef xmmsv_t *ServiceNotifier(xmmsc_connection_t *conn, xmmsc_service_t *service, char *method, xmmsv_t *args, void *udata):
+	cdef object obj
+	cdef XMMSValue v
+	cdef xmmsv_t *ret
+
+	print "ok.. something works??"
+
+	v = XMMSValue()
+	v.val = args
+
+	obj = <object> udata
+	return_type, cb = obj._get_callback(method)
+	r = cb(v)
+
+	return build_crap(r)
+
+cdef xmmsv_t *build_crap(r):
+	cdef xmmsv_t *ret
+	cdef xmmsv_t *ret2
+	cdef xmmsv_t *ret3
+
+	if isinstance(r, int):
+		print "building int", r
+		ret = xmmsv_new_int(r)
+	elif isinstance(r, basestring):
+		print "building string", r
+		apan = r
+		ret = xmmsv_new_string(apan)
+	elif isinstance(r, list):
+		print "creating list"
+		ret = xmmsv_new_list()
+		for i in r:
+			print "appending", i
+			xmmsv_list_append(ret, build_crap(i))
+	elif isinstance(r, dict):
+		print "creating dict", r
+		ret = xmmsv_new_dict()
+		for k,v in r.iteritems():
+			print "dict contains", k, v
+			apan = k
+			ret3 = build_crap(v)
+			xmmsv_dict_insert(ret, apan, ret3)
+
+	return ret
+
+cdef class XMMSService:
+	cdef xmmsc_service_t *service
+	cdef object callbacks
+
+	def __cinit__(self, name, description, major, minor):
+		c_name = from_unicode(name)
+		c_desc = from_unicode(description)
+
+		self.callbacks = {}
+		self.service = xmmsc_service_new(c_name, c_desc, major, minor)
+
+	def _get_callback(self, name):
+		return self.callbacks[name]
+
+	def method_add(self, name, description, return_typ, notifier):
+		self.callbacks[name] = (return_typ, notifier)
+
+		c_name = from_unicode(name)
+		c_desc = from_unicode(description)
+
+		xmmsc_service_method_add_full(self.service, c_name, c_desc, return_typ, ServiceNotifier, <void*> self, ObjectFreeer, NULL)
+
+	def method_add_arg(self, name, typ, optional):
+		c_name = from_unicode(name)
+
+		xmmsc_service_method_add_arg(self.service, c_name, type, optional)
+
+	#def _unref(self):
+	#	cdef xmmsc_service_t *service
+	#	if self.service:
+	#		service = self.service
+	#		self.service = NULL
+	#		xmmsc_service_unref(service)
+
+	#def __dealloc__(self):
+	#	"""
+	#	Deallocate the result.
+	#	"""
+	#	self._unref()
+
 
 cdef class XMMS:
 	"""
@@ -2337,3 +2476,40 @@ cdef class XMMS:
 		@return: The result of the operation.
 		"""
 		return self.create_result(cb, xmmsc_bindata_list(self.conn))
+
+	def service_register(self, service, cb=None):
+		cdef XMMSService real_service
+		if isinstance(service, XMMSService):
+			real_service = <XMMSService> service
+		else:
+			raise TypeError("invalid type passed to service_register")
+		return self.create_result(cb, xmmsc_service_register (self.conn, real_service.service))
+
+	def service_unregsiter(self, XMMSService service, cb=None):
+		cdef XMMSService real_service
+		if isinstance(service, XMMSService):
+			real_service = <XMMSService> service
+		else:
+			raise TypeError("invalid type passed to service_register")
+		return self.create_result(cb, xmmsc_service_unregister (self.conn, real_service.service))
+
+	def sevice_list(self, cb=None):
+		return self.create_result(cb, xmmsc_service_list (self.conn))
+
+	def service_describe(self, service_name, cb=None):
+		c_service_name = from_unicode(service_name)
+		return self.create_result(cb, xmmsc_service_describe (self.conn, c_service_name))
+
+	def service_query(self, service_name, method_name, XMMSValue args=None, cb=None):
+		c_service_name = from_unicode(service_name)
+		c_method_name = from_unicode(method_name)
+		if args is not None:
+			return self.create_result(cb, xmmsc_service_query (self.conn, c_service_name, c_method_name, args.val))
+		else:
+			return self.create_result(cb, xmmsc_service_query (self.conn, c_service_name, c_method_name, NULL))
+
+	def service_shutdown(self, service_name, cb=None):
+		c_service_name = from_unicode(service_name)
+		return self.create_result(cb, xmmsc_service_shutdown (self.conn, c_service_name))
+
+
