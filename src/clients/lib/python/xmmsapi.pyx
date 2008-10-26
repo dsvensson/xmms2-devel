@@ -134,14 +134,14 @@ COLLECTION_CHANGED_REMOVE = XMMS_COLLECTION_CHANGED_REMOVE
 
 cdef extern from "xmmsclient/xmmsclient.h":
 	ctypedef enum xmmsv_type_t:
-		XMMSC_RESULT_VALUE_TYPE_NONE,
-		XMMSC_RESULT_VALUE_TYPE_UINT32,
-		XMMSC_RESULT_VALUE_TYPE_INT32,
-		XMMSC_RESULT_VALUE_TYPE_STRING,
-		XMMSC_RESULT_VALUE_TYPE_DICT
-		XMMSC_RESULT_VALUE_TYPE_PROPDICT
-		XMMSC_RESULT_VALUE_TYPE_BIN
-		XMMSC_RESULT_VALUE_TYPE_COLL
+		XMMSV_TYPE_NONE,
+		XMMSV_TYPE_UINT32,
+		XMMSV_TYPE_INT32,
+		XMMSV_TYPE_STRING,
+		XMMSV_TYPE_DICT
+		XMMSV_TYPE_PROPDICT
+		XMMSV_TYPE_BIN
+		XMMSV_TYPE_COLL
 
 	ctypedef enum xmmsc_result_type_t:
 		XMMSC_RESULT_CLASS_DEFAULT,
@@ -152,6 +152,7 @@ cdef extern from "xmmsclient/xmmsclient.h":
 		pass
 	ctypedef struct xmmsc_result_t
 	ctypedef struct xmmsv_coll_t
+	ctypedef struct xmmsv_t
 	ctypedef void (*xmmsc_result_notifier_t)(xmmsc_result_t *res, void *user_data)
 	ctypedef void (*xmmsc_user_data_free_func_t) (void *user_data)
 	ctypedef void (*xmmsc_io_need_out_callback_func_t) (int, void*)
@@ -163,15 +164,15 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	void xmmsc_result_unref(xmmsc_result_t *res)
 	void xmmsc_result_notifier_set_full(xmmsc_result_t *res, xmmsc_result_notifier_t func, void *user_data, xmmsc_user_data_free_func_t free_func)
 	void xmmsc_result_wait(xmmsc_result_t *res)
-	int xmmsc_result_iserror(xmmsc_result_t *res)
-	char *xmmsc_result_get_error(xmmsc_result_t *res)
-	xmmsv_type_t xmmsc_result_get_type(xmmsc_result_t *res)
+	int xmmsv_is_error(xmmsv_t *res)
+	xmmsv_type_t xmmsv_get_type(xmmsv_t *res)
 	xmmsc_result_type_t xmmsc_result_get_class(xmmsc_result_t *res)
 
-	int xmmsc_result_get_int(xmmsc_result_t *res, int *r)
-	int xmmsc_result_get_uint(xmmsc_result_t *res, unsigned int *r)
-	int xmmsc_result_get_string(xmmsc_result_t *res, xmms_pyrex_constcharpp_t r)
-	int xmmsc_result_get_bin(xmmsc_result_t *res, unsigned char **r, unsigned int *rlen)
+	char *xmmsv_get_error(xmmsv_t *res)
+	int xmmsv_get_int(xmmsv_t *res, int *r)
+	int xmmsv_get_uint(xmmsv_t *res, unsigned int *r)
+	int xmmsv_get_string(xmmsv_t *res, xmms_pyrex_constcharpp_t r)
+	int xmmsv_get_bin(xmmsv_t *res, unsigned char **r, unsigned int *rlen)
 	int xmmsc_result_get_playlist_change(xmmsc_result_t *res, unsigned int *change, unsigned int *id, unsigned int *argument)
 	int xmmsc_result_get_collection (xmmsc_result_t *conn, xmmsv_coll_t **coll)
 
@@ -182,10 +183,10 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	int xmmsc_result_dict_foreach(xmmsc_result_t *res, xmmsc_dict_foreach_func func, void *user_data)
 	int xmmsc_result_propdict_foreach(xmmsc_result_t *res, xmmsc_propdict_foreach_func func, void *user_data)
 
-	int xmmsc_result_is_list(xmmsc_result_t *res)
-	int xmmsc_result_list_next(xmmsc_result_t *res)
-	int xmmsc_result_list_first(xmmsc_result_t *res)
-	int xmmsc_result_list_valid(xmmsc_result_t *res)
+	int xmmsv_is_list(xmmsv_t *res)
+	#int xmmsc_result_list_next(xmmsc_result_t *res)
+	#int xmmsc_result_list_first(xmmsc_result_t *res)
+	#int xmmsc_result_list_valid(xmmsc_result_t *res)
 
 	xmmsc_connection_t *xmmsc_init(char *clientname)
 	void xmmsc_disconnect_callback_set(xmmsc_connection_t *c, xmmsc_disconnect_func_t callback, void *userdata)
@@ -398,21 +399,21 @@ cdef class _ListConverter:
 		free(self.lst) 
 
 cdef foreach_source_hash(char *key, xmmsv_type_t typ, void *value, char *source, udata):
-	if typ == XMMSC_RESULT_VALUE_TYPE_STRING:
+	if typ == XMMSV_TYPE_STRING:
 		v = to_unicode(<char *>value)
-	elif typ == XMMSC_RESULT_VALUE_TYPE_UINT32:
+	elif typ == XMMSV_TYPE_UINT32:
 		v = <unsigned int>value
-	elif typ == XMMSC_RESULT_VALUE_TYPE_INT32:
+	elif typ == XMMSV_TYPE_INT32:
 		v = <int>value
 
 	udata[(source,key)]=v
 
 cdef foreach_hash(char *key, xmmsv_type_t typ, void *value, udata):
-	if typ == XMMSC_RESULT_VALUE_TYPE_STRING:
+	if typ == XMMSV_TYPE_STRING:
 		v = to_unicode(<char *>value)
-	elif typ == XMMSC_RESULT_VALUE_TYPE_UINT32:
+	elif typ == XMMSV_TYPE_UINT32:
 		v = <unsigned int>value
-	elif typ == XMMSC_RESULT_VALUE_TYPE_INT32:
+	elif typ == XMMSV_TYPE_INT32:
 		v = <int>value
 
 	udata[key]=v
@@ -839,7 +840,7 @@ cdef class XMMSResult:
 	"""
 	Class containing the results of some operation
 	"""
-	cdef xmmsc_result_t *res
+	cdef xmmsv_t *res
 	cdef object notifier
 	cdef object callback
 	cdef object c
@@ -851,29 +852,32 @@ cdef class XMMSResult:
 		self.exc = None
 
 	def more_init(self):
-		if self.callback:
-			Py_INCREF(self)
-			xmmsc_result_notifier_set_full(self.res, ResultNotifier, <void *>self, ObjectFreeer)
-			xmmsc_result_unref(self.res)
+		pass
 
-	def _cb(self):
-		cdef xmmsc_result_t *r
-		self._check()
-		if not self.callback:
-			return
-		self.want_restart = 0
-		try:
-			self.callback(self)
-		except:
-			exc = sys.exc_info()
-			traceback.print_exception (exc[0], exc[1], exc[2])
-		if self.want_restart:
-			r = self.res
-			self.res = xmmsc_result_restart(self.res)
-			xmmsc_result_unref(r)
-			xmmsc_result_unref(self.res)
-		elif xmmsc_result_get_class(self.res) != XMMSC_RESULT_CLASS_BROADCAST:
-			self._unref()
+	#def more_init(self):
+	#	if self.callback:
+	#		Py_INCREF(self)
+	#		xmmsc_result_notifier_set_full(self.res, ResultNotifier, <void *>self, ObjectFreeer)
+	#		xmmsc_result_unref(self.res)
+
+	#def _cb(self):
+	#	cdef xmmsc_result_t *r
+	#	self._check()
+	#	if not self.callback:
+	#		return
+	#	self.want_restart = 0
+	#	try:
+	#		self.callback(self)
+	#	except:
+	#		exc = sys.exc_info()
+	#		traceback.print_exception (exc[0], exc[1], exc[2])
+	#	if self.want_restart:
+	#		r = self.res
+	#		self.res = xmmsc_result_restart(self.res)
+	#		xmmsc_result_unref(r)
+	#		xmmsc_result_unref(self.res)
+	#	elif xmmsc_result_get_class(self.res) != XMMSC_RESULT_CLASS_BROADCAST:
+	#		self._unref()
 
 	def get_type(self):
 		"""
@@ -882,25 +886,25 @@ cdef class XMMSResult:
 		"""
 		self._check ()
 	
-		return xmmsc_result_get_type(self.res)
+		return xmmsv_get_type(self.res)
 
 	def _value(self):
 		cdef xmmsv_type_t typ
-		typ = xmmsc_result_get_type(self.res)
+		typ = xmmsv_get_type(self.res)
 
-		if typ == XMMSC_RESULT_VALUE_TYPE_UINT32:
+		if typ == XMMSV_TYPE_UINT32:
 			return self.get_uint()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_DICT:
+		elif typ == XMMSV_TYPE_DICT:
 			return self.get_dict()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_PROPDICT:
+		elif typ == XMMSV_TYPE_PROPDICT:
 			return self.get_propdict()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_INT32:
+		elif typ == XMMSV_TYPE_INT32:
 			return self.get_int()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_STRING:
+		elif typ == XMMSV_TYPE_STRING:
 			return self.get_string()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_BIN:
+		elif typ == XMMSV_TYPE_BIN:
 			return self.get_bin()
-		elif typ == XMMSC_RESULT_VALUE_TYPE_COLL:
+		elif typ == XMMSV_TYPE_COLL:
 			return self.get_coll()
 
 	def value(self):
@@ -910,7 +914,7 @@ cdef class XMMSResult:
 		"""
 		self._check()
 		
-		if xmmsc_result_is_list(self.res):
+		if xmmsv_is_list(self.res):
 			return self.get_list()
 		else:
 			return self._value()
@@ -925,7 +929,7 @@ cdef class XMMSResult:
 		Wait for the result from the daemon.
 		"""
 		self._check()
-		xmmsc_result_wait(self.res)
+		#xmmsc_result_wait(self.res)
 		if self.exc is not None:
 			raise self.exc[0], self.exc[1], self.exc[2]
 
@@ -941,7 +945,7 @@ cdef class XMMSResult:
 		"""
 		cdef int ret
 		self._check()
-		if xmmsc_result_get_int(self.res, &ret):
+		if xmmsv_get_int(self.res, &ret):
 			return ret
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -953,7 +957,7 @@ cdef class XMMSResult:
 		"""
 		cdef unsigned int ret
 		self._check()
-		if xmmsc_result_get_uint(self.res, &ret):
+		if xmmsv_get_uint(self.res, &ret):
 			return ret
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -966,7 +970,7 @@ cdef class XMMSResult:
 		cdef char *ret
 
 		self._check()
-		if xmmsc_result_get_string(self.res, <xmms_pyrex_constcharpp_t>&ret):
+		if xmmsv_get_string(self.res, <xmms_pyrex_constcharpp_t>&ret):
 			return to_unicode(ret)
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -980,7 +984,7 @@ cdef class XMMSResult:
 		cdef unsigned int rlen
 
 		self._check()
-		if xmmsc_result_get_bin(self.res, &ret, &rlen):
+		if xmmsv_get_bin(self.res, &ret, &rlen):
 			return PyString_FromStringAndSize(<char *>ret, rlen)
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -1039,23 +1043,23 @@ cdef class XMMSResult:
 		@return: Whether the result represents an error or not.
 		@rtype: Boolean
 		"""
-		return xmmsc_result_iserror(self.res)
+		return xmmsv_is_error(self.res)
 
 	def get_error(self):
 		"""
 		@return: Error string from the result.
 		@rtype: String
 		"""
-		if xmmsc_result_get_error(self.res) == NULL:
+		if xmmsv_get_error(self.res) == NULL:
 			return None
 		else:
-			return xmmsc_result_get_error(self.res)
+			return xmmsv_get_error(self.res)
 	def _unref(self):
 		cdef xmmsc_result_t *res
-		if self.res:
-			res = self.res
-			self.res = NULL
-			xmmsc_result_unref(res)
+		#if self.res:
+		#	res = self.res
+		#	self.res = NULL
+		#	xmmsc_result_unref(res)
 			
 	def __dealloc__(self):
 		"""
@@ -1408,8 +1412,8 @@ cdef class XMMS:
 		ret = XMMSResult(self)
 		ret.callback = cb
 		
-		ret.res = r
-		ret.more_init()
+		#ret.res = r
+		#ret.more_init()
 
 		return ret
 		
