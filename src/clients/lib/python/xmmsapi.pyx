@@ -346,7 +346,7 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	xmmsc_result_t *xmmsv_coll_idlist_from_playlist_file (xmmsc_connection_t *conn, char *path)
 
 	xmmsc_result_t *xmmsv_coll_query_ids (xmmsc_connection_t *conn, xmmsv_coll_t *coll, xmms_pyrex_constcharpp_t order, unsigned int limit_start, unsigned int limit_len)
-	xmmsc_result_t *xmmsv_coll_query_infos (xmmsc_connection_t *conn, xmmsv_coll_t *coll, xmms_pyrex_constcharpp_t order, unsigned int limit_start, unsigned int limit_len,  xmms_pyrex_constcharpp_t fetch, xmms_pyrex_constcharpp_t group)
+	xmmsc_result_t *xmmsv_coll_query_infos (xmmsc_connection_t *conn, xmmsv_coll_t *coll, xmmsv_t *order, unsigned int limit_start, unsigned int limit_len,  xmmsv_t *fetch, xmmsv_t *order)
 
 
 	xmmsv_coll_t *xmmsv_coll_new (xmmsv_coll_type_t)
@@ -879,8 +879,9 @@ cdef class XMMSValue:
 	def __cinit__(self, val=None):
 		if isinstance(val, int):
 			self.val = xmmsv_new_int(val)
-		#elif isinstance(val, basestring):
-		#	self.val = xmmsv_new_string(from_unicode(basestring))
+		if isinstance(val, basestring):
+			apan = from_unicode(val)
+			self.val = xmmsv_new_string(val)
 
 	def get_type(self):
 		"""
@@ -1221,7 +1222,7 @@ cdef class XMMSService:
 	def method_add_arg(self, name, typ, optional):
 		c_name = from_unicode(name)
 
-		xmmsc_service_method_add_arg(self.service, c_name, type, optional)
+		xmmsc_service_method_add_arg(self.service, c_name, typ, optional)
 
 	#def _unref(self):
 	#	cdef xmmsc_service_t *service
@@ -2420,6 +2421,9 @@ cdef class XMMS:
 		cdef _ListConverter flds
 		cdef _ListConverter orderflds
 		cdef _ListConverter grpby
+		cdef xmmsv_t *c_fetch
+		cdef xmmsv_t *c_order
+		cdef xmmsv_t *c_group
 
 		if order is None:
 			order = []
@@ -2427,12 +2431,15 @@ cdef class XMMS:
 		if groupby is None:
 			groupby = []
 
-		flds = _ListConverter(fields)
-		orderflds = _ListConverter(order)
-		grpby = _ListConverter(groupby)
+		c_fetch = build_crap(fields)
+		c_order = build_crap(order)
+		c_group = build_crap(groupby)
+		#flds = _ListConverter(fields)
+		#orderflds = _ListConverter(order)
+		#grpby = _ListConverter(groupby)
 
 		c = <Collection> coll
-		return self.create_result(cb, xmmsv_coll_query_infos(self.conn, c.coll, <xmms_pyrex_constcharpp_t>orderflds.lst, start, leng, <xmms_pyrex_constcharpp_t>flds.lst, <xmms_pyrex_constcharpp_t>grpby.lst))
+		return self.create_result(cb, xmmsv_coll_query_infos(self.conn, c.coll, c_order, start, leng, c_fetch, c_group))
 
 
 	def bindata_add(self, data, cb=None):
@@ -2500,11 +2507,11 @@ cdef class XMMS:
 		c_service_name = from_unicode(service_name)
 		return self.create_result(cb, xmmsc_service_describe (self.conn, c_service_name))
 
-	def service_query(self, service_name, method_name, XMMSValue args=None, cb=None):
+	def service_query(self, service_name, method_name, args, cb=None):
 		c_service_name = from_unicode(service_name)
 		c_method_name = from_unicode(method_name)
 		if args is not None:
-			return self.create_result(cb, xmmsc_service_query (self.conn, c_service_name, c_method_name, args.val))
+			return self.create_result(cb, xmmsc_service_query (self.conn, c_service_name, c_method_name, build_crap(args)))
 		else:
 			return self.create_result(cb, xmmsc_service_query (self.conn, c_service_name, c_method_name, NULL))
 
