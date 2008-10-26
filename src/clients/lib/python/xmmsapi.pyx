@@ -26,17 +26,6 @@ cdef extern from "xmms_pyrex_hacks.h":
 		pass
 
 cdef extern from "xmmsc/xmmsc_idnumbers.h":
-	ctypedef enum xmmsv_t:
-		XMMSV_TYPE_NONE,
-		XMMSV_TYPE_UINT32,
-		XMMSV_TYPE_INT32,
-		XMMSV_TYPE_STRING,
-		XMMSV_TYPE_DICT,
-		XMMSV_TYPE_LIST,
-		XMMSV_TYPE_PROPDICT,
-		XMMSV_TYPE_COLL
-		XMMSV_TYPE_BIN
-
 	ctypedef enum xmmsv_coll_type_t:
 		XMMS_COLLECTION_TYPE_REFERENCE
 		XMMS_COLLECTION_TYPE_UNION
@@ -153,6 +142,7 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	ctypedef struct xmmsc_result_t
 	ctypedef struct xmmsv_coll_t
 	ctypedef struct xmmsv_t
+	ctypedef struct xmmsv_list_iter_t
 	ctypedef void (*xmmsc_result_notifier_t)(xmmsc_result_t *res, void *user_data)
 	ctypedef void (*xmmsc_user_data_free_func_t) (void *user_data)
 	ctypedef void (*xmmsc_io_need_out_callback_func_t) (int, void*)
@@ -167,26 +157,31 @@ cdef extern from "xmmsclient/xmmsclient.h":
 	int xmmsv_is_error(xmmsv_t *res)
 	xmmsv_type_t xmmsv_get_type(xmmsv_t *res)
 	xmmsc_result_type_t xmmsc_result_get_class(xmmsc_result_t *res)
+	void xmmsv_unref(xmmsv_t *value)
 
-	char *xmmsv_get_error(xmmsv_t *res)
+	int xmmsv_get_error(xmmsv_t *value, xmms_pyrex_constcharpp_t r)
 	int xmmsv_get_int(xmmsv_t *res, int *r)
 	int xmmsv_get_uint(xmmsv_t *res, unsigned int *r)
 	int xmmsv_get_string(xmmsv_t *res, xmms_pyrex_constcharpp_t r)
 	int xmmsv_get_bin(xmmsv_t *res, unsigned char **r, unsigned int *rlen)
 	int xmmsc_result_get_playlist_change(xmmsc_result_t *res, unsigned int *change, unsigned int *id, unsigned int *argument)
-	int xmmsc_result_get_collection (xmmsc_result_t *conn, xmmsv_coll_t **coll)
+	int xmmsv_get_collection (xmmsv_t *value, xmmsv_coll_t **coll)
 
-	ctypedef void(*xmmsc_dict_foreach_func)(void *key, xmmsv_type_t type, void *value, void *user_data)
-	ctypedef void(*xmmsc_propdict_foreach_func)(void *key, xmmsv_type_t type, void *value, char *source, void *user_data)
+	ctypedef void(*xmmsv_dict_foreach_func)(char *key, xmmsv_t *value, void *user_data)
 
 	int xmmsc_result_get_dict_entry(xmmsc_result_t *res, char *key, char **r)
-	int xmmsc_result_dict_foreach(xmmsc_result_t *res, xmmsc_dict_foreach_func func, void *user_data)
-	int xmmsc_result_propdict_foreach(xmmsc_result_t *res, xmmsc_propdict_foreach_func func, void *user_data)
+	int xmmsv_dict_foreach(xmmsv_t *value, xmmsv_dict_foreach_func func, void *user_data)
 
-	int xmmsv_is_list(xmmsv_t *res)
-	#int xmmsc_result_list_next(xmmsc_result_t *res)
-	#int xmmsc_result_list_first(xmmsc_result_t *res)
-	#int xmmsc_result_list_valid(xmmsc_result_t *res)
+	int  xmmsv_is_list(xmmsv_t *res)
+	int  xmmsv_get_list_iter (xmmsv_t *val, xmmsv_list_iter_t **it)
+	int  xmmsv_list_iter_entry (xmmsv_list_iter_t *it, xmmsv_t **val)
+	int  xmmsv_list_iter_valid (xmmsv_list_iter_t *it)
+	void xmmsv_list_iter_first (xmmsv_list_iter_t *it)
+	void xmmsv_list_iter_next (xmmsv_list_iter_t *it)
+	int  xmmsv_list_iter_goto (xmmsv_list_iter_t *it, int pos)
+	int  xmmsv_list_iter_insert (xmmsv_list_iter_t *it, xmmsv_t *val)
+	int  xmmsv_list_iter_remove (xmmsv_list_iter_t *it)
+
 
 	xmmsc_connection_t *xmmsc_init(char *clientname)
 	void xmmsc_disconnect_callback_set(xmmsc_connection_t *c, xmmsc_disconnect_func_t callback, void *userdata)
@@ -379,7 +374,7 @@ cdef class _ListConverter:
 	cdef char **lst
 	cdef int leng
 	
-	def __new__(self, inlist):
+	def __cinit__(self, inlist):
 		cdef int i
 		self.leng = len(inlist)
 		self.lst = <char **>malloc((self.leng + 1)* sizeof(char*))
@@ -483,7 +478,7 @@ cdef class Collection:
 cdef class CollectionIDList:
 	cdef xmmsv_coll_t *coll
 
-	def __new__(self):
+	def __cinit__(self):
 		self.coll = NULL
 
 	def __dealloc__(self):
@@ -553,7 +548,7 @@ cdef class CollectionOperands:
 	cdef xmmsv_coll_t *coll
 	cdef object pylist
 	
-	def __new__(self):
+	def __cinit__(self):
 		self.pylist = []
 		self.coll = NULL
 	def __dealloc__(self):
@@ -585,7 +580,7 @@ cdef class CollectionAttributes:
 	cdef xmmsv_coll_t *coll
 	cdef object pydict
 
-	def __new__(self):
+	def __cinit__(self):
 		self.coll = NULL
 
 	def __dealloc__(self):
@@ -840,14 +835,14 @@ cdef class XMMSResult:
 	"""
 	Class containing the results of some operation
 	"""
-	cdef xmmsv_t *res
+	cdef xmmsc_result_t *res
 	cdef object notifier
 	cdef object callback
 	cdef object c
 	cdef object exc
 	cdef int want_restart
 
-	def __new__(self, c):
+	def __cinit__(self, c):
 		self.c = c
 		self.exc = None
 
@@ -879,46 +874,7 @@ cdef class XMMSResult:
 	#	elif xmmsc_result_get_class(self.res) != XMMSC_RESULT_CLASS_BROADCAST:
 	#		self._unref()
 
-	def get_type(self):
-		"""
-		Return the type of data contained in this result.
-		The return value is one of the OBJECT_CMD_ARG_* constants.
-		"""
-		self._check ()
-	
-		return xmmsv_get_type(self.res)
 
-	def _value(self):
-		cdef xmmsv_type_t typ
-		typ = xmmsv_get_type(self.res)
-
-		if typ == XMMSV_TYPE_UINT32:
-			return self.get_uint()
-		elif typ == XMMSV_TYPE_DICT:
-			return self.get_dict()
-		elif typ == XMMSV_TYPE_PROPDICT:
-			return self.get_propdict()
-		elif typ == XMMSV_TYPE_INT32:
-			return self.get_int()
-		elif typ == XMMSV_TYPE_STRING:
-			return self.get_string()
-		elif typ == XMMSV_TYPE_BIN:
-			return self.get_bin()
-		elif typ == XMMSV_TYPE_COLL:
-			return self.get_coll()
-
-	def value(self):
-		"""
-		Return value of appropriate data type contained in this result.
-		This can be used instead of most get_* functions in this class.
-		"""
-		self._check()
-		
-		if xmmsv_is_list(self.res):
-			return self.get_list()
-		else:
-			return self._value()
-	
 
 	def _check(self):
 		if not self.res:
@@ -938,14 +894,54 @@ cdef class XMMSResult:
 			raise ValueError("Can only disconnect signals and broadcasts")
 		xmmsc_result_disconnect(self.res)
 
+
+cdef class XMMSValue:
+	cdef xmmsv_t *val
+
+	def get_type(self):
+		"""
+		Return the type of data contained in this result.
+		The return value is one of the OBJECT_CMD_ARG_* constants.
+		"""
+		self._check ()
+	
+		return xmmsv_get_type(self.val)
+
+	def _value(self):
+		cdef xmmsv_type_t typ
+		typ = xmmsv_get_type(self.val)
+
+		if typ == XMMSV_TYPE_UINT32:
+			return self.get_uint()
+		elif typ == XMMSV_TYPE_DICT:
+			return self.get_dict()
+		elif typ == XMMSV_TYPE_INT32:
+			return self.get_int()
+		elif typ == XMMSV_TYPE_STRING:
+			return self.get_string()
+		elif typ == XMMSV_TYPE_BIN:
+			return self.get_bin()
+		elif typ == XMMSV_TYPE_COLL:
+			return self.get_coll()
+
+	def value(self):
+		"""
+		Return value of appropriate data type contained in this result.
+		This can be used instead of most get_* functions in this class.
+		"""
+
+		if xmmsv_is_list(self.val):
+			return self.get_list()
+		else:
+			return self._value()
+
 	def get_int(self):
 		"""
 		Get data from the result structure as an int.
 		@rtype: int
 		"""
 		cdef int ret
-		self._check()
-		if xmmsv_get_int(self.res, &ret):
+		if xmmsv_get_int(self.val, &ret):
 			return ret
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -956,8 +952,7 @@ cdef class XMMSResult:
 		@rtype: uint
 		"""
 		cdef unsigned int ret
-		self._check()
-		if xmmsv_get_uint(self.res, &ret):
+		if xmmsv_get_uint(self.val, &ret):
 			return ret
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -969,8 +964,7 @@ cdef class XMMSResult:
 		"""
 		cdef char *ret
 
-		self._check()
-		if xmmsv_get_string(self.res, <xmms_pyrex_constcharpp_t>&ret):
+		if xmmsv_get_string(self.val, <xmms_pyrex_constcharpp_t>&ret):
 			return to_unicode(ret)
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -983,8 +977,7 @@ cdef class XMMSResult:
 		cdef unsigned char *ret
 		cdef unsigned int rlen
 
-		self._check()
-		if xmmsv_get_bin(self.res, &ret, &rlen):
+		if xmmsv_get_bin(self.val, &ret, &rlen):
 			return PyString_FromStringAndSize(<char *>ret, rlen)
 		else:
 			raise ValueError("Failed to retrieve value!")
@@ -995,7 +988,7 @@ cdef class XMMSResult:
 		@rtype: Collection
 		"""
 		cdef xmmsv_coll_t *coll
-		if not xmmsc_result_get_collection(self.res, &coll):
+		if not xmmsv_get_collection(self.val, &coll):
 			raise ValueError("Failed to retrieve value!")
 
 		return create_coll(coll)
@@ -1005,62 +998,61 @@ cdef class XMMSResult:
 		"""
 		@return: A dictionary containing media info.
 		"""
-		self._check()
 		
 		ret = {}
-		if not xmmsc_result_dict_foreach(self.res, <xmmsc_dict_foreach_func> foreach_hash, <void *>ret):
+		if not xmmsv_dict_foreach(self.val, <xmmsv_dict_foreach_func> foreach_hash, <void *>ret):
 			raise ValueError("Failed to retrieve value!")
 		return ret
 
-	def get_propdict(self):
-		"""
-		@return: A source dict.
-		"""
-		self._check()
-		ret = PropDict(self.c.get_source_preference())
-		if not xmmsc_result_propdict_foreach(self.res, <xmmsc_propdict_foreach_func> foreach_source_hash, <void *>ret):
-			raise ValueError("Failed to retrieve value!")
-		return ret
+	#def get_propdict(self):
+	#	"""
+	#	@return: A source dict.
+	#	"""
+	#	ret = PropDict(self.c.get_source_preference())
+	#	return ret
 			
 	def get_list (self) :
 		"""
 		@return: A list of dicts from the result structure.
 		"""
-		self._check()
 		ret = []
-		while xmmsc_result_list_valid(self.res):
-			ret.append(self._value())
-			xmmsc_result_list_next(self.res)
-		return ret
 
-	def restart(self):
-		self._check()
-		if xmmsc_result_get_class(self.res) == XMMSC_RESULT_CLASS_SIGNAL:
-			self.want_restart = 1
+		cdef xmmsv_list_iter_t *iter
+		cdef xmmsv_t *val
+
+		xmmsv_get_list_iter (self.val, &iter)
+		while xmmsv_list_iter_valid(iter):
+			xmmsv_list_iter_entry(iter, &val)
+			ret.append(self._value())
+			xmmsv_list_iter_next(iter)
+		return ret
 
 	def iserror(self):
 		"""
 		@return: Whether the result represents an error or not.
 		@rtype: Boolean
 		"""
-		return xmmsv_is_error(self.res)
+		return xmmsv_is_error(self.val)
 
 	def get_error(self):
 		"""
 		@return: Error string from the result.
 		@rtype: String
 		"""
-		if xmmsv_get_error(self.res) == NULL:
-			return None
+		cdef char *ret
+
+		if xmmsv_get_error(self.val, <xmms_pyrex_constcharpp_t>&ret):
+			return to_unicode(ret)
 		else:
-			return xmmsv_get_error(self.res)
+			raise ValueError("Failed to retrieve value!")
+
 	def _unref(self):
-		cdef xmmsc_result_t *res
-		#if self.res:
-		#	res = self.res
-		#	self.res = NULL
-		#	xmmsc_result_unref(res)
-			
+		cdef xmmsv_t *value
+		if self.val:
+			value = self.val
+			self.val = NULL
+			xmmsv_unref(value)
+
 	def __dealloc__(self):
 		"""
 		Deallocate the result.
@@ -1103,7 +1095,7 @@ cdef class XMMS:
 	cdef object needout_fun
 	cdef object sources
 
-	def __new__(self, clientname = None):
+	def __cinit__(self, clientname = None):
 		"""
 		Initiates a connection to the XMMS2 daemon. All operations
 		involving the daemon are done via this connection.
