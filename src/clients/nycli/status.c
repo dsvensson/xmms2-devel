@@ -159,7 +159,10 @@ static void
 status_update_position (cli_infos_t *infos, status_entry_t *entry)
 {
 	xmmsv_t *p;
-	p = xmmsv_new_int (infos->cache->currpos);
+	gint currpos;
+
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
+	p = xmmsv_new_int (currpos);
 	xmmsv_dict_set (entry->data, "position", p);
 	xmmsv_unref (p);
 }

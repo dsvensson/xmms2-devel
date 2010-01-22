@@ -1101,7 +1101,7 @@ list_jump_rel (xmmsc_result_t *res, cli_infos_t *infos, gint inc)
 	gint plsize;
 	GArray *playlist;
 
-	currpos = infos->cache->currpos;
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 	plsize = infos->cache->active_playlist->len;
 	playlist = infos->cache->active_playlist;
 

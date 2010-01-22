@@ -431,8 +431,10 @@ static void
 fill_column_display (cli_infos_t *infos, column_display_t *disp,
                      const gchar **columns)
 {
-	gint i;
 	const gchar *nextsep = NULL;
+	gint i, currpos;
+
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 
 	for (i = 0; columns[i]; ++i) {
 		/* Separator between columns */
@@ -455,14 +457,13 @@ fill_column_display (cli_infos_t *infos, column_display_t *disp,
 			nextsep = "/";
 		} else if (strcmp (columns[i], "curr") == 0) {
 			column_display_add_special (disp, "",
-			                            GINT_TO_POINTER(infos->cache->currpos),
+			                            GINT_TO_POINTER(currpos),
 			                            2,
 			                            COLUMN_DEF_SIZE_FIXED,
 			                            COLUMN_DEF_ALIGN_LEFT,
 			                            column_display_render_highlight);
 			nextsep = NULL;
 		} else if (strcmp (columns[i], "next") == 0) {
-			int currpos = infos->cache->currpos;
 			/* If no currpos, start counting from the beginning */
 			if (currpos < 0) {
 				currpos = 0;
@@ -510,6 +511,9 @@ create_list_column_display (cli_infos_t *infos)
 {
 	column_display_t *coldisp;
 	const gchar *format;
+	gint currpos;
+
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 
 	format = configuration_get_string (infos->config, "CLASSIC_LIST_FORMAT");
 
@@ -522,7 +526,7 @@ create_list_column_display (cli_infos_t *infos)
 	                                                          "PLAYLIST_MARKER"));
 
 	column_display_add_special (coldisp, "",
-	                            GINT_TO_POINTER(infos->cache->currpos), 2,
+	                            GINT_TO_POINTER(currpos), 2,
 	                            COLUMN_DEF_SIZE_FIXED,
 	                            COLUMN_DEF_ALIGN_LEFT,
 	                            column_display_render_highlight);
@@ -683,13 +687,16 @@ cli_jump (cli_infos_t *infos, command_context_t *ctx)
 	xmmsc_coll_t *query;
 	gboolean backward = TRUE, retval = TRUE;
 	playlist_positions_t *positions;
+	gint currpos;
 
 	if (!command_flag_boolean_get (ctx, "backward", &backward)) {
 		backward = FALSE;
 	}
 
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
+
 	/* Select by positions */
-	if (command_arg_positions_get (ctx, 0, &positions, infos->cache->currpos)) {
+	if (command_arg_positions_get (ctx, 0, &positions, currpos)) {
 		position_jump (infos, positions);
 		playlist_positions_free (positions);
 
@@ -767,7 +774,7 @@ cli_list (cli_infos_t *infos, command_context_t *ctx)
 	    || strcmp (playlist, infos->cache->active_playlist_name) == 0) {
 		/* FIXME: Optim by reading data from cache */
 		playlist = XMMS_ACTIVE_PLAYLIST;
-		pos = infos->cache->currpos;
+		pos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 	} else {
 		/* currpos is 1 for non-active playlists
 		   FIXME: always true? */
@@ -836,9 +843,12 @@ cli_info (cli_infos_t *infos, command_context_t *ctx)
 	xmmsc_coll_t *query;
 	xmmsc_result_t *res;
 	playlist_positions_t *positions;
+	gint currpos;
+
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 
 	/* Select by positions */
-	if (command_arg_positions_get (ctx, 0, &positions, infos->cache->currpos)) {
+	if (command_arg_positions_get (ctx, 0, &positions, currpos)) {
 		positions_print_info (infos, positions);
 		playlist_positions_free (positions);
 
@@ -865,18 +875,19 @@ static gboolean
 cmd_flag_pos_get (cli_infos_t *infos, command_context_t *ctx, gint *pos, gboolean append)
 {
 	gboolean next;
-	gint at;
+	gint at, currpos;
 	gboolean at_isset;
 
 	command_flag_boolean_get (ctx, "next", &next);
 	at_isset = command_flag_int_get (ctx, "at", &at);
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 
 	if (next && at_isset) {
 		g_printf (_("Error: --next and --at are mutually exclusive!\n"));
 		return FALSE;
 	} else if (next) {
-		if (infos->cache->currpos >= 0) {
-			*pos = infos->cache->currpos + 1;
+		if (currpos >= 0) {
+			*pos = currpos + 1;
 		} else {
 			g_printf (_("Error: --next cannot be used if there is no "
 			            "active track!\n"));
@@ -1286,6 +1297,7 @@ cli_remove (cli_infos_t *infos, command_context_t *ctx)
 	xmmsc_coll_t *query;
 	xmmsc_result_t *res, *plres;
 	playlist_positions_t *positions;
+	gint currpos;
 
 	command_flag_string_get (ctx, "playlist", &playlist);
 	if (!playlist
@@ -1293,8 +1305,10 @@ cli_remove (cli_infos_t *infos, command_context_t *ctx)
 		playlist = NULL;
 	}
 
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
+
 	/* Select by positions */
-	if (command_arg_positions_get (ctx, 0, &positions, infos->cache->currpos)) {
+	if (command_arg_positions_get (ctx, 0, &positions, currpos)) {
 		positions_remove (infos, playlist, positions);
 		playlist_positions_free (positions);
 
@@ -1334,7 +1348,7 @@ gboolean
 cli_move (cli_infos_t *infos, command_context_t *ctx)
 {
 	gchar *playlist;
-	gint pos;
+	gint pos, currpos;
 	xmmsc_result_t *res;
 	xmmsc_coll_t *query;
 	playlist_positions_t *positions;
@@ -1348,8 +1362,10 @@ cli_move (cli_infos_t *infos, command_context_t *ctx)
 		return FALSE;
 	}
 
+	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
+
 	/* Select by positions */
-	if (command_arg_positions_get (ctx, 0, &positions, infos->cache->currpos)) {
+	if (command_arg_positions_get (ctx, 0, &positions, currpos)) {
 		positions_move (infos, playlist, positions, pos);
 		playlist_positions_free (positions);
 
