@@ -60,5 +60,6 @@ gboolean cli_cache_is_fresh (cli_cache_t *cache);
 void cli_cache_refresh (cli_infos_t *infos);
 void cli_cache_free (cli_cache_t *cache);
 gint32 cli_cache_playlist_position (cli_infos_t *infos, const gchar *name);
+gint32 cli_cache_playlist_length (cli_infos_t *infos, const gchar *name);
 
 #endif /* __CLI_INFOS_H__ */

@@ -357,6 +357,13 @@ cli_cache_playlist_position (cli_infos_t *infos, const gchar *playlist)
 	return infos->cache->currpos;
 }
 
+/** Get the length of a playlist */
+gint32
+cli_cache_playlist_length (cli_infos_t *infos, const gchar *playlist)
+{
+	return infos->cache->active_playlist->len;
+}
+
 /** Free all memory owned by the cache. */
 void
 cli_cache_free (cli_cache_t *cache)
