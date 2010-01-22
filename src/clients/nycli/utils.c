@@ -536,9 +536,12 @@ pos_print_info_cb (gint pos, void *userdata)
 	xmmsc_result_t *infores;
 	pl_pos_udata_t *pack = (pl_pos_udata_t *) userdata;
 	guint id;
+	gint len;
+
+	len = cli_cache_playlist_length (pack->infos, XMMS_ACTIVE_PLAYLIST);
 
 	/* Skip if outside of playlist */
-	if (pos >= pack->infos->cache->active_playlist->len) {
+	if (pos >= len) {
 		return;
 	}
 
@@ -1102,7 +1105,7 @@ list_jump_rel (xmmsc_result_t *res, cli_infos_t *infos, gint inc)
 	GArray *playlist;
 
 	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
-	plsize = infos->cache->active_playlist->len;
+	plsize = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 	playlist = infos->cache->active_playlist;
 
 	/* If no currpos, start jump from beginning */
@@ -1416,7 +1419,7 @@ remove_cached_list (xmmsc_result_t *matching, cli_infos_t *infos)
 
 	val = xmmsc_result_get_value (matching);
 
-	plsize = infos->cache->active_playlist->len;
+	plsize = cli_cache_playlist_length (infos, XMMS_ACTIVE_PLAYLIST);
 	playlist = infos->cache->active_playlist;
 
 	if (xmmsv_get_error (val, &err) || !xmmsv_is_type (val, XMMSV_TYPE_LIST)) {

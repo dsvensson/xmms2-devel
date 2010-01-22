@@ -875,12 +875,13 @@ static gboolean
 cmd_flag_pos_get (cli_infos_t *infos, command_context_t *ctx, gint *pos, gboolean append)
 {
 	gboolean next;
-	gint at, currpos;
+	gint at, currpos, len;
 	gboolean at_isset;
 
 	command_flag_boolean_get (ctx, "next", &next);
 	at_isset = command_flag_int_get (ctx, "at", &at);
 	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
+	len = cli_cache_playlist_length (infos, XMMS_ACTIVE_PLAYLIST);
 
 	if (next && at_isset) {
 		g_printf (_("Error: --next and --at are mutually exclusive!\n"));
@@ -896,7 +897,7 @@ cmd_flag_pos_get (cli_infos_t *infos, command_context_t *ctx, gint *pos, gboolea
 	} else if (at_isset) {
 		/* FIXME: handle relative values ? */
 		/* beware: int vs uint */
-		if (at == 0 || (at > 0 && at > infos->cache->active_playlist->len + 1)) {
+		if (at == 0 || (at > 0 && at > len + 1)) {
 			g_printf (_("Error: specified position is outside the playlist!\n"));
 			return FALSE;
 		} else {
@@ -904,7 +905,7 @@ cmd_flag_pos_get (cli_infos_t *infos, command_context_t *ctx, gint *pos, gboolea
 		}
 	} else if (append) {
 		/* No flag given, just enqueue */
-		*pos = infos->cache->active_playlist->len;
+		*pos = len;
 	} else {
 		return FALSE;
 	}
