@@ -350,6 +350,13 @@ cli_cache_is_fresh (cli_cache_t *cache)
 	       freshness_is_fresh (&cache->freshness_active_playlist_name);
 }
 
+/** Get the position of a playlist */
+gint32
+cli_cache_playlist_position (cli_infos_t *infos, const gchar *playlist)
+{
+	return infos->cache->currpos;
+}
+
 /** Free all memory owned by the cache. */
 void
 cli_cache_free (cli_cache_t *cache)
