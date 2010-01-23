@@ -545,7 +545,7 @@ pos_print_info_cb (gint pos, void *userdata)
 		return;
 	}
 
-	id = g_array_index (pack->infos->cache->active_playlist, guint, pos);
+	id = cli_cache_playlist_position_id (pack->infos, XMMS_ACTIVE_PLAYLIST, pos);
 
 	infores = xmmsc_medialib_get_info (pack->infos->sync, id);
 	xmmsc_result_wait (infores);
@@ -1106,7 +1106,6 @@ list_jump_rel (xmmsc_result_t *res, cli_infos_t *infos, gint inc)
 
 	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
 	plsize = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
-	playlist = infos->cache->active_playlist;
 
 	/* If no currpos, start jump from beginning */
 	if (currpos < 0) {
@@ -1124,6 +1123,9 @@ list_jump_rel (xmmsc_result_t *res, cli_infos_t *infos, gint inc)
 
 		/* Loop on the playlist */
 		for (i = (currpos + inc) % plsize; i != currpos; i = (i + inc) % plsize) {
+			gint plid;
+
+			plid = cli_cache_playlist_position_id (infos, XMMS_ACTIVE_PLAYLIST, i);
 
 			/* Loop on the matched media */
 			for (xmmsv_list_iter_first (it);
@@ -1134,8 +1136,7 @@ list_jump_rel (xmmsc_result_t *res, cli_infos_t *infos, gint inc)
 				xmmsv_list_iter_entry (it, &entry);
 
 				/* If both match, jump! */
-				if (xmmsv_get_int (entry, &id)
-				    && g_array_index (playlist, guint, i) == id) {
+				if (xmmsv_get_int (entry, &id) && plid == id) {
 					jumpres = xmmsc_playlist_set_next (infos->sync, i);
 					xmmsc_result_wait (jumpres);
 					tickle (jumpres, infos);
@@ -1408,7 +1409,6 @@ remove_cached_list (xmmsc_result_t *matching, cli_infos_t *infos)
 {
 	/* FIXME: w00t at code copy-paste, please modularize */
 	xmmsc_result_t *rmres;
-	guint plid;
 	gint32 id;
 	gint plsize;
 	GArray *playlist;
@@ -1420,7 +1420,6 @@ remove_cached_list (xmmsc_result_t *matching, cli_infos_t *infos)
 	val = xmmsc_result_get_value (matching);
 
 	plsize = cli_cache_playlist_length (infos, XMMS_ACTIVE_PLAYLIST);
-	playlist = infos->cache->active_playlist;
 
 	if (xmmsv_get_error (val, &err) || !xmmsv_is_type (val, XMMSV_TYPE_LIST)) {
 		g_printf (_("Error retrieving the media matching the pattern!\n"));
@@ -1431,7 +1430,9 @@ remove_cached_list (xmmsc_result_t *matching, cli_infos_t *infos)
 
 		/* Loop on the playlist (backward, easier to remove) */
 		for (i = plsize - 1; i >= 0; i--) {
-			plid = g_array_index (playlist, guint, i);
+			gint plid;
+
+			plid = cli_cache_playlist_position_id (infos, XMMS_ACTIVE_PLAYLIST, i);
 
 			/* Loop on the matched media */
 			for (xmmsv_list_iter_first (it);
