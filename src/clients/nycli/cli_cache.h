@@ -61,5 +61,6 @@ void cli_cache_refresh (cli_infos_t *infos);
 void cli_cache_free (cli_cache_t *cache);
 gint32 cli_cache_playlist_position (cli_infos_t *infos, const gchar *name);
 gint32 cli_cache_playlist_length (cli_infos_t *infos, const gchar *name);
+gint32 cli_cache_playlist_position_id (cli_infos_t *infos, const gchar *name, gint32 position);
 
 #endif /* __CLI_INFOS_H__ */

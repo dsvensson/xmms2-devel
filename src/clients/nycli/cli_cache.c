@@ -364,6 +364,13 @@ cli_cache_playlist_length (cli_infos_t *infos, const gchar *playlist)
 	return infos->cache->active_playlist->len;
 }
 
+/** Get the id of a position in a playlist */
+gint32
+cli_cache_playlist_position_id (cli_infos_t *infos, const gchar *playlist, gint32 position)
+{
+	return g_array_index (infos->cache->active_playlist, guint, position);
+}
+
 /** Free all memory owned by the cache. */
 void
 cli_cache_free (cli_cache_t *cache)
