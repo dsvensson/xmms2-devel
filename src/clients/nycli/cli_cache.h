@@ -25,6 +25,7 @@
 
 #include "main.h"
 
+typedef struct playlist_St playlist_t;
 typedef struct freshness_St freshness_t;
 typedef enum cli_cache_status_St cli_cache_status_t;
 
@@ -39,18 +40,22 @@ struct freshness_St {
 	gint pending_queries;
 };
 
+struct playlist_St {
+	gint32 position;
+	GArray *content;
+	freshness_t freshness_content;
+	freshness_t freshness_position;
+};
+
 struct cli_cache_St {
-	gint32 currpos;
 	gint32 currid;
 	gint32 playback_status;
-	GArray *active_playlist;
 	gchar *active_playlist_name;
+	GHashTable *playlists;
 
 	/* Freshness of each attribute */
-	freshness_t freshness_currpos;
 	freshness_t freshness_currid;
 	freshness_t freshness_playback_status;
-	freshness_t freshness_active_playlist;
 	freshness_t freshness_active_playlist_name;
 };
 

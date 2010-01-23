@@ -877,11 +877,13 @@ cmd_flag_pos_get (cli_infos_t *infos, command_context_t *ctx, gint *pos, gboolea
 	gboolean next;
 	gint at, currpos, len;
 	gboolean at_isset;
+	const gchar *playlist = XMMS_ACTIVE_PLAYLIST;
 
+	command_flag_string_get (ctx, "playlist", &playlist);
 	command_flag_boolean_get (ctx, "next", &next);
 	at_isset = command_flag_int_get (ctx, "at", &at);
-	currpos = cli_cache_playlist_position (infos, XMMS_ACTIVE_PLAYLIST);
-	len = cli_cache_playlist_length (infos, XMMS_ACTIVE_PLAYLIST);
+	currpos = cli_cache_playlist_position (infos, playlist);
+	len = cli_cache_playlist_length (infos, playlist);
 
 	if (next && at_isset) {
 		g_printf (_("Error: --next and --at are mutually exclusive!\n"));
