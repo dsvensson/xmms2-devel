@@ -109,10 +109,10 @@ struct xmms_output_St {
 
 	/* */
 	GMutex *playtime_mutex;
-	guint played;
-	guint played_time;
+	gint played;
+	gint played_time;
 	xmms_medialib_entry_t current_entry;
-	guint toskip;
+	gint toskip;
 
 	/* */
 	GThread *filler_thread;
@@ -122,7 +122,7 @@ struct xmms_output_St {
 	xmms_output_filler_state_t filler_state;
 
 	xmms_ringbuf_t *filler_buffer;
-	guint32 filler_seek;
+	gint filler_seek;
 	gint filler_skip;
 
 	/** Internal status, tells which state the
@@ -218,9 +218,9 @@ xmms_output_format_list_clear(xmms_output_t *output)
 }
 
 static void
-update_playtime (xmms_output_t *output, int advance)
+update_playtime (xmms_output_t *output, gint advance)
 {
-	guint buffersize = 0;
+	gint buffersize = 0;
 
 	g_mutex_lock (output->playtime_mutex);
 	output->played += advance;
@@ -235,8 +235,8 @@ update_playtime (xmms_output_t *output, int advance)
 	g_mutex_lock (output->playtime_mutex);
 
 	if (output->format) {
-		guint ms = xmms_sample_bytes_to_ms (output->format,
-		                                    output->played - buffersize);
+		gint ms = xmms_sample_bytes_to_ms (output->format,
+		                                   output->played - buffersize);
 		if ((ms / 100) != (output->played_time / 100)) {
 			xmms_object_emit_f (XMMS_OBJECT (output),
 			                    XMMS_IPC_SIGNAL_PLAYBACK_PLAYTIME,
@@ -357,7 +357,7 @@ xmms_output_filler_state (xmms_output_t *output, xmms_output_filler_state_t stat
 	g_mutex_unlock (output->filler_mutex);
 }
 static void
-xmms_output_filler_seek_state (xmms_output_t *output, guint32 samples)
+xmms_output_filler_seek_state (xmms_output_t *output, gint samples)
 {
 	g_mutex_lock (output->filler_mutex);
 	output->filler_state = FILLER_SEEK;
@@ -601,7 +601,7 @@ xmms_playback_client_tickle (xmms_output_t *output, xmms_error_t *error)
 static void
 xmms_playback_client_seek_ms (xmms_output_t *output, gint32 ms, gint32 whence, xmms_error_t *error)
 {
-	guint samples;
+	gint32 samples;
 
 	g_return_if_fail (output);
 
@@ -774,7 +774,7 @@ xmms_playback_client_volume_get (xmms_output_t *output, xmms_error_t *error)
 static gint32
 xmms_playback_client_playtime (xmms_output_t *output, xmms_error_t *error)
 {
-	guint32 ret;
+	gint ret;
 	g_return_val_if_fail (output, 0);
 
 	g_mutex_lock (output->playtime_mutex);
