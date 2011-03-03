@@ -233,11 +233,10 @@ static gint32
 get_played_samples (xmms_output_t *output)
 {
 	gint ret;
+
 	g_return_val_if_fail (output, 0);
 
-	g_mutex_lock (output->playtime_mutex);
-	ret = output->played;
-	g_mutex_unlock (output->playtime_mutex);
+	ret = g_atomic_int_get (&output->played_time);
 
 	return ret;
 }
@@ -272,20 +271,19 @@ update_playtime_delta (xmms_output_t *output, gint advance)
 {
 	gint samples;
 
-	g_mutex_lock (output->playtime_mutex);
-	samples = output->played + advance;
-	output->played = samples;
-	g_mutex_unlock (output->playtime_mutex);
+	g_return_if_fail (output);
 
-	signal_playtime (output, samples);
+	samples = g_atomic_int_exchange_and_add (&output->played, advance);
+
+	signal_playtime (output, samples + advance);
 }
 
 static void
 update_playtime (xmms_output_t *output, gint samples)
 {
-	g_mutex_lock (output->playtime_mutex);
-	output->played = samples;
-	g_mutex_unlock (output->playtime_mutex);
+	g_return_if_fail (output);
+
+	g_atomic_int_set (&output->played, samples);
 
 	signal_playtime (output, samples);
 }
