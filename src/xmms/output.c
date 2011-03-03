@@ -244,37 +244,55 @@ get_played_samples (xmms_output_t *output)
 }
 
 static void
-update_playtime (xmms_output_t *output, gint advance)
+signal_playtime (xmms_output_t *output, gint samples)
 {
-	gint buffersize = 0;
-
-	g_mutex_lock (output->playtime_mutex);
-	output->played += advance;
-	g_mutex_unlock (output->playtime_mutex);
+	guint buffersize, ms;
 
 	buffersize = xmms_output_plugin_method_latency_get (output->plugin, output);
 
-	if (output->played < buffersize) {
-		buffersize = output->played;
+	if (samples < buffersize) {
+		buffersize = samples;
+	}
+
+	if (!output->format) {
+		return;
 	}
 
 	g_mutex_lock (output->playtime_mutex);
 
-	if (output->format) {
-		gint ms = xmms_sample_bytes_to_ms (output->format,
-		                                   output->played - buffersize);
-		if ((ms / 100) != (output->played_time / 100)) {
-			xmms_object_emit_f (XMMS_OBJECT (output),
-			                    XMMS_IPC_SIGNAL_PLAYBACK_PLAYTIME,
-			                    XMMSV_TYPE_INT32,
-			                    ms);
-		}
-		output->played_time = ms;
-
+	ms = xmms_sample_bytes_to_ms (output->format, samples - buffersize);
+	if ((ms / 100) != (output->played_time / 100)) {
+		xmms_object_emit_f (XMMS_OBJECT (output),
+		                    XMMS_IPC_SIGNAL_PLAYBACK_PLAYTIME,
+		                    XMMSV_TYPE_INT32, ms);
 	}
 
+	output->played_time = ms;
+
+	g_mutex_unlock (output->playtime_mutex);
+}
+
+static void
+update_playtime_delta (xmms_output_t *output, gint advance)
+{
+	gint samples;
+
+	g_mutex_lock (output->playtime_mutex);
+	samples = output->played + advance;
+	output->played = samples;
 	g_mutex_unlock (output->playtime_mutex);
 
+	signal_playtime (output, samples);
+}
+
+static void
+update_playtime (xmms_output_t *output, gint samples)
+{
+	g_mutex_lock (output->playtime_mutex);
+	output->played = samples;
+	g_mutex_unlock (output->playtime_mutex);
+
+	signal_playtime (output, samples);
 }
 
 void
@@ -353,10 +371,9 @@ seek_done (void *data)
 {
 	xmms_output_t *output = (xmms_output_t *)data;
 
-	g_mutex_lock (output->playtime_mutex);
-	output->played = output->filler_seek * xmms_sample_frame_size_get (output->format);
+	update_playtime (output, output->filler_seek * xmms_sample_frame_size_get (output->format));
+
 	output->toskip = output->filler_skip * xmms_sample_frame_size_get (output->format);
-	g_mutex_unlock (output->playtime_mutex);
 
 	xmms_output_flush (output);
 	return TRUE;
@@ -573,7 +590,7 @@ xmms_output_read (xmms_output_t *output, char *buffer, gint len)
 	}
 	g_mutex_unlock (output->filler_mutex);
 
-	update_playtime (output, ret);
+	update_playtime_delta (output, ret);
 
 	if (ret < len) {
 		XMMS_DBG ("Underrun %d of %d (%d)", ret, len, xmms_sample_frame_size_get (output->format));
