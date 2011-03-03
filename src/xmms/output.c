@@ -217,6 +217,32 @@ xmms_output_format_list_clear(xmms_output_t *output)
 	output->format_list = NULL;
 }
 
+static gint32
+get_played_ms (xmms_output_t *output)
+{
+	gint ret;
+	g_return_val_if_fail (output, 0);
+
+	g_mutex_lock (output->playtime_mutex);
+	ret = output->played_time;
+	g_mutex_unlock (output->playtime_mutex);
+
+	return ret;
+}
+
+static gint32
+get_played_samples (xmms_output_t *output)
+{
+	gint ret;
+	g_return_val_if_fail (output, 0);
+
+	g_mutex_lock (output->playtime_mutex);
+	ret = output->played;
+	g_mutex_unlock (output->playtime_mutex);
+
+	return ret;
+}
+
 static void
 update_playtime (xmms_output_t *output, gint advance)
 {
@@ -606,12 +632,10 @@ xmms_playback_client_seek_ms (xmms_output_t *output, gint32 ms, gint32 whence, x
 	g_return_if_fail (output);
 
 	if (whence == XMMS_PLAYBACK_SEEK_CUR) {
-		g_mutex_lock (output->playtime_mutex);
-		ms += output->played_time;
+		ms += get_played_ms (output);
 		if (ms < 0) {
 			ms = 0;
 		}
-		g_mutex_unlock (output->playtime_mutex);
 	}
 
 	if (output->format) {
@@ -626,12 +650,10 @@ static void
 xmms_playback_client_seek_samples (xmms_output_t *output, gint32 samples, gint32 whence, xmms_error_t *error)
 {
 	if (whence == XMMS_PLAYBACK_SEEK_CUR) {
-		g_mutex_lock (output->playtime_mutex);
-		samples += output->played / xmms_sample_frame_size_get (output->format);
+		samples += get_played_samples (output) / xmms_sample_frame_size_get (output->format);
 		if (samples < 0) {
 			samples = 0;
 		}
-		g_mutex_unlock (output->playtime_mutex);
 	}
 
 	/* "just" tell filler */
@@ -774,14 +796,9 @@ xmms_playback_client_volume_get (xmms_output_t *output, xmms_error_t *error)
 static gint32
 xmms_playback_client_playtime (xmms_output_t *output, xmms_error_t *error)
 {
-	gint ret;
 	g_return_val_if_fail (output, 0);
 
-	g_mutex_lock (output->playtime_mutex);
-	ret = output->played_time;
-	g_mutex_unlock (output->playtime_mutex);
-
-	return ret;
+	return get_played_ms (output);
 }
 
 /* returns the current latency: time left in ms until the data currently read
