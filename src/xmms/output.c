@@ -221,11 +221,10 @@ static gint32
 get_played_ms (xmms_output_t *output)
 {
 	gint ret;
+
 	g_return_val_if_fail (output, 0);
 
-	g_mutex_lock (output->playtime_mutex);
-	ret = output->played_time;
-	g_mutex_unlock (output->playtime_mutex);
+	ret = g_atomic_int_get (&output->played_time);
 
 	return ret;
 }
@@ -258,18 +257,14 @@ signal_playtime (xmms_output_t *output, gint samples)
 		return;
 	}
 
-	g_mutex_lock (output->playtime_mutex);
-
 	ms = xmms_sample_bytes_to_ms (output->format, samples - buffersize);
-	if ((ms / 100) != (output->played_time / 100)) {
+	if ((ms / 100) != (get_played_ms (output) / 100)) {
 		xmms_object_emit_f (XMMS_OBJECT (output),
 		                    XMMS_IPC_SIGNAL_PLAYBACK_PLAYTIME,
 		                    XMMSV_TYPE_INT32, ms);
 	}
 
-	output->played_time = ms;
-
-	g_mutex_unlock (output->playtime_mutex);
+	g_atomic_int_set (&output->played_time, ms);
 }
 
 static void
