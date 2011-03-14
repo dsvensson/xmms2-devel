@@ -8,6 +8,15 @@ import os
 import Options
 from logging import warning
 
+from TaskGen import feature, before
+@feature('*')
+@before('apply_core')
+def post_the_other(self):
+    deps = getattr(self, 'depends_on', []) 
+    for name in self.to_list(deps):
+        other = self.bld.name_to_obj(name, self.env)
+        other.post()
+
 source = """
     config.c
     mediainfo.c
@@ -57,6 +66,8 @@ def build(bld):
         xform
     """.split()
 
+
+    ipc_files = []
     for ipc_object_file in ipc_object_files:
         python_script = ipc_object_file + '_ipc.py'
         c_file = ipc_object_file + '_ipc.c'
@@ -67,6 +78,7 @@ def build(bld):
             rule='${PYTHON} ${SRC[1].abspath()} > ${TGT}',
             before='cc',
         )
+        ipc_files.append(c_file)
 
     prog = bld.new_task_gen('cc', 'program')
     prog.target = 'xmms2d'
@@ -91,11 +103,13 @@ def build(bld):
         lib.includes = '. ../.. ../include ../includepriv'
         lib.uselib = 'glib2 gmodule2 gthread2 sqlite3 statfs socket shm'
         lib.uselib_local = 'xmmsipc xmmssocket xmmsutils xmmstypes xmmsvisualization'
+        lib.depends_on = ipc_files
 
         prog.uselib_local = 'xmms2core'
     else:
         prog.source += source
         prog.uselib_local = ''
+        prog.depends_on = ipc_files
 
     prog.uselib_local += ' xmmsipc xmmssocket xmmsutils xmmstypes xmmsvisualization'
     prog.uselib = 'math glib2 gmodule2 gthread2 sqlite3 statfs socket shm valgrind'
