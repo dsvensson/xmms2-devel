@@ -23,6 +23,19 @@
 #include "xmmspriv/xmms_plugin.h"
 
 typedef struct xmms_xform_object_St xmms_xform_object_t;
+typedef struct xmms_xform_chain_St xmms_xform_chain_t;
+
+
+xmms_xform_chain_t *xmms_xform_chain_new_from_entry (xmms_medialib_entry_t entry, GList *goal_formats, gboolean rehash);
+xmms_xform_chain_t *xmms_xform_chain_new_from_url (xmms_medialib_entry_t entry, const gchar *url, GList *goal_formats, gboolean rehash);
+xmms_medialib_entry_t xmms_xform_chain_entry_get (xmms_xform_chain_t *chain);
+xmms_stream_type_t *xmms_xform_chain_stream_type_get (xmms_xform_chain_t *chain);
+gint64 xmms_xform_chain_seek (xmms_xform_chain_t *chain, gint64 offset, xmms_xform_seek_mode_t whence, xmms_error_t *err);
+int xmms_xform_chain_read (xmms_xform_chain_t *chain, gpointer buf, int siz, xmms_error_t *err);
+xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry, GList *goal_hints);
+xmms_xform_t *xmms_xform_new_effect (xmms_xform_t* last, xmms_medialib_entry_t entry, GList *goal_formats, const gchar *name);
+void xmms_xform_metadata_collect (xmms_xform_t *start, GString *namestr, gboolean rehashing);
+
 
 xmms_xform_object_t *xmms_xform_object_init (void);
 
@@ -34,12 +47,14 @@ xmms_stream_type_t *xmms_xform_outtype_get (xmms_xform_t *xform);
 xmms_plugin_t *xmms_xform_plugin_new (void);
 gboolean xmms_xform_plugin_verify (xmms_plugin_t *plugin);
 
-xmms_xform_t *xmms_xform_chain_setup (xmms_medialib_entry_t entry, GList *goal_formats, gboolean rehash);
-xmms_xform_t *xmms_xform_chain_setup_url (xmms_medialib_entry_t entry, const gchar *url, GList *goal_formats, gboolean rehash);
+/*
+xmms_xform_chain_t *xmms_xform_chain_setup (xmms_medialib_entry_t entry, GList *goal_formats, gboolean rehash);
+xmms_xform_chain_t *xmms_xform_chain_setup_url (xmms_medialib_entry_t entry, const gchar *url, GList *goal_formats, gboolean rehash);
+*/
 
-gint64 xmms_xform_this_seek (xmms_xform_t *xform, gint64 offset, xmms_xform_seek_mode_t whence, xmms_error_t *err);
-int xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, int siz, xmms_error_t *err);
-gboolean xmms_xform_iseos (xmms_xform_t *xform);
+gint64 xmms_xform_this_seek (xmms_xform_t *chain, gint64 offset, xmms_xform_seek_mode_t whence, xmms_error_t *err);
+int xmms_xform_this_read (xmms_xform_t *chain, gpointer buf, int siz, xmms_error_t *err);
+gboolean xmms_xform_iseos (xmms_xform_t *chain);
 
 const GList *xmms_xform_goal_hints_get (xmms_xform_t *xform);
 xmms_stream_type_t *xmms_xform_intype_get (xmms_xform_t *xform);

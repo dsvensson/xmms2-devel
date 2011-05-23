@@ -267,7 +267,7 @@ xmms_output_set_error (xmms_output_t *output, xmms_error_t *error)
 
 typedef struct {
 	xmms_output_t *output;
-	xmms_xform_t *chain;
+	xmms_xform_chain_t *chain;
 	gboolean flush;
 } xmms_output_song_changed_arg_t;
 
@@ -275,26 +275,26 @@ static void
 song_changed_arg_free (void *data)
 {
 	xmms_output_song_changed_arg_t *arg = (xmms_output_song_changed_arg_t *)data;
-	xmms_object_unref (arg->chain);
+	//xmms_object_unref (arg->chain);
 	g_free (arg);
 }
 
 static gboolean
-song_changed (void *data)
+song_changed(void *data)
 {
 	/* executes in the output thread; NOT the filler thread */
 	xmms_output_song_changed_arg_t *arg = (xmms_output_song_changed_arg_t *)data;
 	xmms_medialib_entry_t entry;
 	xmms_stream_type_t *type;
 
-	entry = xmms_xform_entry_get (arg->chain);
+	entry = xmms_xform_chain_entry_get (arg->chain);
 
 	XMMS_DBG ("Running hotspot! Song changed!! %d", entry);
 
 	arg->output->played = 0;
 	arg->output->current_entry = entry;
 
-	type = xmms_xform_outtype_get (arg->chain);
+	type = xmms_xform_chain_stream_type_get (arg->chain);
 
 	if (!xmms_output_format_set (arg->output, type)) {
 		gint fmt, rate, chn;
@@ -370,7 +370,7 @@ static void *
 xmms_output_filler (void *arg)
 {
 	xmms_output_t *output = (xmms_output_t *)arg;
-	xmms_xform_t *chain = NULL;
+	xmms_xform_chain_t *chain = NULL;
 	gboolean last_was_kill = FALSE;
 	char buf[4096];
 	xmms_error_t err;
@@ -410,7 +410,7 @@ xmms_output_filler (void *arg)
 				continue;
 			}
 
-			ret = xmms_xform_this_seek (chain, output->filler_seek, XMMS_XFORM_SEEK_SET, &err);
+			ret = xmms_xform_chain_seek (chain, output->filler_seek, XMMS_XFORM_SEEK_SET, &err);
 			if (ret == -1) {
 				XMMS_DBG ("Seeking failed: %s", xmms_error_message_get (&err));
 			} else {
@@ -446,7 +446,7 @@ xmms_output_filler (void *arg)
 				continue;
 			}
 
-			chain = xmms_xform_chain_setup (entry, output->format_list, FALSE);
+			chain = xmms_xform_chain_new_from_entry (entry, output->format_list, FALSE);
 			if (!chain) {
 				session = xmms_medialib_begin_write ();
 				if (xmms_medialib_entry_property_get_int (session, entry, XMMS_MEDIALIB_ENTRY_PROPERTY_STATUS) == XMMS_MEDIALIB_ENTRY_STATUS_NEW) {
@@ -486,7 +486,7 @@ xmms_output_filler (void *arg)
 		}
 		g_mutex_unlock (output->filler_mutex);
 
-		ret = xmms_xform_this_read (chain, buf, sizeof (buf), &err);
+		ret = xmms_xform_chain_read (chain, buf, sizeof (buf), &err);
 
 		g_mutex_lock (output->filler_mutex);
 

@@ -302,7 +302,7 @@ xmms_collection_client_idlist_from_playlist (xmms_coll_dag_t *dag,
 	const gchar *buf;
 
 	/* we don't want any effects for playlist, so just report we're rehashing */
-	xform = xmms_xform_chain_setup_url (0, path, global_stream_type, TRUE);
+	xform = xmms_xform_chain_new_from_url (0, path, global_stream_type, TRUE);
 
 	if (!xform) {
 		xmms_error_set (err, XMMS_ERROR_NO_SAUSAGE, "We can't handle this type of playlist or URL");

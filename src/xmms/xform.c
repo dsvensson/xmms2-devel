@@ -82,19 +82,20 @@ typedef struct xmms_xform_hotspot_St {
 	xmmsv_t *obj;
 } xmms_xform_hotspot_t;
 
+typedef struct xmms_xform_object_config_data_St {
+	xmms_xform_object_t *chain;
+	gint effect_no;
+} xmms_xform_object_config_data_t;
+
 #define READ_CHUNK 4096
 
 
-xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry,
-                               GList *goal_hints);
+
 const char *xmms_xform_shortname (xmms_xform_t *xform);
 static xmms_xform_t *add_effects (xmms_xform_t *last,
                                   xmms_medialib_entry_t entry,
                                   GList *goal_formats);
-static xmms_xform_t *xmms_xform_new_effect (xmms_xform_t* last,
-                                            xmms_medialib_entry_t entry,
-                                            GList *goal_formats,
-                                            const gchar *name);
+
 static void xmms_xform_destroy (xmms_object_t *object);
 static void effect_callbacks_init (void);
 
@@ -111,7 +112,6 @@ xmms_xform_browse_add_entry_property_str (xmms_xform_t *xform,
 	xmms_xform_browse_add_entry_property (xform, key, val);
 	xmmsv_unref (val);
 }
-
 
 void
 xmms_xform_browse_add_entry_property_int (xmms_xform_t *xform,
@@ -492,8 +492,6 @@ xmms_xform_intype_get (xmms_xform_t *xform)
 	return xmms_xform_outtype_get (xform->prev);
 }
 
-
-
 const char *
 xmms_xform_outtype_get_str (xmms_xform_t *xform, xmms_stream_type_key_t key)
 {
@@ -505,7 +503,6 @@ xmms_xform_outtype_get_int (xmms_xform_t *xform, xmms_stream_type_key_t key)
 {
 	return xmms_stream_type_get_int (xform->out_type, key);
 }
-
 
 void
 xmms_xform_metadata_set_int (xmms_xform_t *xform, const char *key, int val)
@@ -664,7 +661,7 @@ xmms_xform_metadata_collect_r (xmms_xform_t *xform, metadata_festate_t *info,
 	xform->metadata_collected = TRUE;
 }
 
-static void
+void
 xmms_xform_metadata_collect (xmms_xform_t *start, GString *namestr, gboolean rehashing)
 {
 	metadata_festate_t info;
@@ -1225,305 +1222,13 @@ xmms_xform_goal_hints_get (xmms_xform_t *xform)
 	return xform->goal_hints;
 }
 
-
-static gboolean
-has_goalformat (xmms_xform_t *xform, GList *goal_formats)
-{
-	const xmms_stream_type_t *current;
-	gboolean ret = FALSE;
-	GList *n;
-
-	current = xmms_xform_get_out_stream_type (xform);
-
-	for (n = goal_formats; n; n = g_list_next (n)) {
-		xmms_stream_type_t *goal_type = n->data;
-		if (xmms_stream_type_match (goal_type, current)) {
-			ret = TRUE;
-			break;
-		}
-
-	}
-
-	if (!ret) {
-		XMMS_DBG ("Not in one of %d goal-types", g_list_length (goal_formats));
-	}
-
-	return ret;
-}
-
-static void
-outdata_type_metadata_collect (xmms_xform_t *xform)
-{
-	gint val;
-	const char *mime;
-	xmms_stream_type_t *type;
-
-	type = xform->out_type;
-	mime = xmms_stream_type_get_str (type, XMMS_STREAM_TYPE_MIMETYPE);
-	if (strcmp (mime, "audio/pcm") != 0) {
-		return;
-	}
-
-	val = xmms_stream_type_get_int (type, XMMS_STREAM_TYPE_FMT_FORMAT);
-	if (val != -1) {
-		const gchar *name = xmms_sample_name_get ((xmms_sample_format_t) val);
-		xmms_xform_metadata_set_str (xform,
-		                             XMMS_MEDIALIB_ENTRY_PROPERTY_SAMPLE_FMT,
-		                             name);
-	}
-
-	val = xmms_stream_type_get_int (type, XMMS_STREAM_TYPE_FMT_SAMPLERATE);
-	if (val != -1) {
-		xmms_xform_metadata_set_int (xform,
-		                             XMMS_MEDIALIB_ENTRY_PROPERTY_SAMPLERATE,
-		                             val);
-	}
-
-	val = xmms_stream_type_get_int (type, XMMS_STREAM_TYPE_FMT_CHANNELS);
-	if (val != -1) {
-		xmms_xform_metadata_set_int (xform,
-		                             XMMS_MEDIALIB_ENTRY_PROPERTY_CHANNELS,
-		                             val);
-	}
-}
-
-static xmms_xform_t *
-chain_setup (xmms_medialib_entry_t entry, const gchar *url, GList *goal_formats)
-{
-	xmms_xform_t *xform, *last;
-	gchar *durl, *args;
-
-	if (!entry) {
-		entry = 1; /* FIXME: this is soooo ugly, don't do this */
-	}
-
-	xform = xmms_xform_new (NULL, NULL, 0, goal_formats);
-
-	durl = g_strdup (url);
-
-	args = strchr (durl, '?');
-	if (args) {
-		gchar **params;
-		gint i;
-		*args = 0;
-		args++;
-		xmms_medialib_decode_url (args);
-
-		params = g_strsplit (args, "&", 0);
-
-		for (i = 0; params && params[i]; i++) {
-			gchar *v;
-			v = strchr (params[i], '=');
-			if (v) {
-				*v = 0;
-				v++;
-				xmms_xform_metadata_set_str (xform, params[i], v);
-			} else {
-				xmms_xform_metadata_set_int (xform, params[i], 1);
-			}
-		}
-		g_strfreev (params);
-	}
-	xmms_medialib_decode_url (durl);
-
-	xmms_xform_outdata_type_add (xform, XMMS_STREAM_TYPE_MIMETYPE,
-	                             "application/x-url", XMMS_STREAM_TYPE_URL,
-	                             durl, XMMS_STREAM_TYPE_END);
-
-	g_free (durl);
-
-	last = xform;
-
-	do {
-		xform = xmms_xform_find (last, entry, goal_formats);
-		if (!xform) {
-			xmms_log_error ("Couldn't set up chain for '%s' (%d)",
-			                url, entry);
-			xmms_object_unref (last);
-
-			return NULL;
-		}
-		xmms_object_unref (last);
-		last = xform;
-	} while (!has_goalformat (xform, goal_formats));
-
-	outdata_type_metadata_collect (last);
-
-	return last;
-}
-
-static void
-chain_finalize (xmms_xform_t *xform, xmms_medialib_entry_t entry,
-                const gchar *url, gboolean rehashing)
-{
-	GString *namestr;
-
-	namestr = g_string_new ("");
-	xmms_xform_metadata_collect (xform, namestr, rehashing);
-	xmms_log_info ("Successfully setup chain for '%s' (%d) containing %s",
-	               url, entry, namestr->str);
-
-	g_string_free (namestr, TRUE);
-}
-
-static gchar *
-get_url_for_entry (xmms_medialib_entry_t entry)
-{
-	xmms_medialib_session_t *session;
-	gchar *url = NULL;
-
-	session = xmms_medialib_begin ();
-	url = xmms_medialib_entry_property_get_str (session, entry,
-	                                            XMMS_MEDIALIB_ENTRY_PROPERTY_URL);
-	xmms_medialib_end (session);
-
-	if (!url) {
-		xmms_log_error ("Couldn't get url for entry (%d)", entry);
-	}
-
-	return url;
-}
-
-xmms_xform_t *
-xmms_xform_chain_setup (xmms_medialib_entry_t entry, GList *goal_formats,
-                        gboolean rehash)
-{
-	gchar *url;
-	xmms_xform_t *xform;
-
-	if (!(url = get_url_for_entry (entry))) {
-		return NULL;
-	}
-
-	xform = xmms_xform_chain_setup_url (entry, url, goal_formats, rehash);
-	g_free (url);
-
-	return xform;
-}
-
-xmms_xform_t *
-xmms_xform_chain_setup_url (xmms_medialib_entry_t entry, const gchar *url,
-                            GList *goal_formats, gboolean rehash)
-{
-	xmms_xform_t *last;
-	xmms_plugin_t *plugin;
-	xmms_xform_plugin_t *xform_plugin;
-	gboolean add_segment = FALSE;
-	gint priority;
-
-	last = chain_setup (entry, url, goal_formats);
-	if (!last) {
-		return NULL;
-	}
-
-	/* first check that segment plugin is available in the system */
-	plugin = xmms_plugin_find (XMMS_PLUGIN_TYPE_XFORM, "segment");
-	xform_plugin = (xmms_xform_plugin_t *) plugin;
-
-	/* if segment plugin input is the same as current output, include it
-	 * for collecting additional duration metadata on audio entries */
-	if (xform_plugin) {
-		add_segment = xmms_xform_plugin_supports (xform_plugin,
-		                                          last->out_type,
-		                                          &priority);
-		xmms_object_unref (plugin);
-	}
-
-	/* add segment plugin to the chain if it can be added */
-	if (add_segment) {
-		last = xmms_xform_new_effect (last, entry, goal_formats, "segment");
-		if (!last) {
-			return NULL;
-		}
-	}
-
-	/* if not rehashing, also initialize all the effect plugins */
-	if (!rehash) {
-		last = add_effects (last, entry, goal_formats);
-		if (!last) {
-			return NULL;
-		}
-	}
-
-	chain_finalize (last, entry, url, rehash);
-	return last;
-}
-
 xmms_config_property_t *
 xmms_xform_config_lookup (xmms_xform_t *xform, const gchar *path)
 {
 	g_return_val_if_fail (xform->plugin, NULL);
 
 	return xmms_plugin_config_lookup ((xmms_plugin_t *) xform->plugin, path);
-}
 
-static xmms_xform_t *
-add_effects (xmms_xform_t *last, xmms_medialib_entry_t entry,
-             GList *goal_formats)
-{
-	gint effect_no;
-
-	for (effect_no = 0; TRUE; effect_no++) {
-		xmms_config_property_t *cfg;
-		gchar key[64];
-		const gchar *name;
-
-		g_snprintf (key, sizeof (key), "effect.order.%i", effect_no);
-
-		cfg = xmms_config_lookup (key);
-		if (!cfg) {
-			break;
-		}
-
-		name = xmms_config_property_get_string (cfg);
-
-		if (!name[0]) {
-			continue;
-		}
-
-		last = xmms_xform_new_effect (last, entry, goal_formats, name);
-	}
-
-	return last;
-}
-
-static xmms_xform_t *
-xmms_xform_new_effect (xmms_xform_t *last, xmms_medialib_entry_t entry,
-                       GList *goal_formats, const gchar *name)
-{
-	xmms_plugin_t *plugin;
-	xmms_xform_plugin_t *xform_plugin;
-	xmms_xform_t *xform;
-	gint priority;
-
-	plugin = xmms_plugin_find (XMMS_PLUGIN_TYPE_XFORM, name);
-	if (!plugin) {
-		xmms_log_error ("Couldn't find any effect named '%s'", name);
-		return last;
-	}
-
-	xform_plugin = (xmms_xform_plugin_t *) plugin;
-	if (!xmms_xform_plugin_supports (xform_plugin, last->out_type, &priority)) {
-		xmms_log_info ("Effect '%s' doesn't support format, skipping",
-		               xmms_plugin_shortname_get (plugin));
-		xmms_object_unref (plugin);
-		return last;
-	}
-
-	xform = xmms_xform_new (xform_plugin, last, entry, goal_formats);
-
-	if (xform) {
-		xmms_object_unref (last);
-		last = xform;
-	} else {
-		xmms_log_info ("Effect '%s' failed to initialize, skipping",
-		               xmms_plugin_shortname_get (plugin));
-	}
-	xmms_xform_plugin_config_property_register (xform_plugin,
-	                                            "enabled", "0",
-	                                            NULL, NULL);
-	xmms_object_unref (plugin);
-	return last;
 }
 
 static void
@@ -1604,8 +1309,7 @@ effect_callbacks_init (void)
 	/* the name stored in the last present property was not "" or there was no
 	   last present property */
 	if ((!effect_no) || name[0]) {
-			xmms_config_property_register (key, "", update_effect_properties,
-			                               GINT_TO_POINTER (effect_no));
+		xmms_config_property_register (key, "", update_effect_properties,
+		                               GINT_TO_POINTER (effect_no));
 	}
-}
-
+ }

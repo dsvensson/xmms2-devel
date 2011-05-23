@@ -148,7 +148,7 @@ xmms_mediainfo_reader_thread (gpointer data)
 		xmmsc_medialib_entry_status_t prev_status;
 		guint lmod = 0;
 		xmms_medialib_entry_t entry;
-		xmms_xform_t *xform;
+		xmms_xform_chain_t *chain;
 
 		session = xmms_medialib_begin_write ();
 		entry = xmms_medialib_entry_not_resolved_get (session);
@@ -191,9 +191,9 @@ xmms_mediainfo_reader_thread (gpointer data)
 		}
 
 		xmms_medialib_end (session);
-		xform = xmms_xform_chain_setup (entry, goal_format, TRUE);
+		chain = xmms_xform_chain_new_from_entry (entry, goal_format, TRUE);
 
-		if (!xform) {
+		if (!chain) {
 			if (prev_status == XMMS_MEDIALIB_ENTRY_STATUS_NEW) {
 				xmms_medialib_entry_remove (entry);
 			} else {
@@ -205,7 +205,7 @@ xmms_mediainfo_reader_thread (gpointer data)
 			continue;
 		}
 
-		xmms_object_unref (xform);
+		xmms_object_unref (chain);
 		g_get_current_time (&timeval);
 
 		session = xmms_medialib_begin_write ();
