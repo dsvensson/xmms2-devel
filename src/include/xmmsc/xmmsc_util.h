@@ -4,12 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "xmmsc/xmmsc_compiler.h"
 #include "xmmsc/xmmsc_stdbool.h"
 
 #define XMMS_STRINGIFY_NOEXPAND(x) #x
 #define XMMS_STRINGIFY(x) XMMS_STRINGIFY_NOEXPAND(x)
 
-void xmms_dump_stack (void);
+void xmms_dump_stack (void) XMMS_PUBLIC;
 
 #define x_return_if_fail(expr) if (!(expr)) { fprintf (stderr, "Failed in file " __FILE__ " on  row %d\n", __LINE__); xmms_dump_stack (); return; }
 #define x_return_val_if_fail(expr, val) if (!(expr)) { fprintf (stderr, "Failed in file " __FILE__ " on  row %d\n", __LINE__); xmms_dump_stack (); return val; }
@@ -47,10 +48,10 @@ void xmms_dump_stack (void);
 /* 9667 is XMMS written on a phone */
 #define XMMS_DEFAULT_TCP_PORT 9667
 
-const char *xmms_userconfdir_get (char *buf, int len);
-const char *xmms_usercachedir_get (char *buf, int len);
-const char *xmms_default_ipcpath_get (char *buf, int len);
-const char *xmms_fallback_ipcpath_get (char *buf, int len);
-bool xmms_sleep_ms (int n);
+const char *xmms_userconfdir_get (char *buf, int len) XMMS_PUBLIC;
+const char *xmms_usercachedir_get (char *buf, int len) XMMS_PUBLIC;
+const char *xmms_default_ipcpath_get (char *buf, int len) XMMS_PUBLIC;
+const char *xmms_fallback_ipcpath_get (char *buf, int len) XMMS_PUBLIC;
+bool xmms_sleep_ms (int n) XMMS_PUBLIC;
 
 #endif /* __XMMS_UTILS_H__ */

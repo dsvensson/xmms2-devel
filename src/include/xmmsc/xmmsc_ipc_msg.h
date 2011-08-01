@@ -30,20 +30,20 @@
 
 typedef struct xmms_ipc_msg_St xmms_ipc_msg_t;
 
-uint32_t xmms_ipc_msg_get_object (const xmms_ipc_msg_t *msg);
-uint32_t xmms_ipc_msg_get_cmd (const xmms_ipc_msg_t *msg);
-uint32_t xmms_ipc_msg_get_cookie (const xmms_ipc_msg_t *msg);
-void xmms_ipc_msg_set_cookie (xmms_ipc_msg_t *msg, uint32_t cookie);
+uint32_t xmms_ipc_msg_get_object (const xmms_ipc_msg_t *msg) XMMS_PUBLIC;
+uint32_t xmms_ipc_msg_get_cmd (const xmms_ipc_msg_t *msg) XMMS_PUBLIC;
+uint32_t xmms_ipc_msg_get_cookie (const xmms_ipc_msg_t *msg) XMMS_PUBLIC;
+void xmms_ipc_msg_set_cookie (xmms_ipc_msg_t *msg, uint32_t cookie) XMMS_PUBLIC;
 
-xmms_ipc_msg_t *xmms_ipc_msg_new (uint32_t object, uint32_t cmd);
-xmms_ipc_msg_t * xmms_ipc_msg_alloc (void);
-void xmms_ipc_msg_destroy (xmms_ipc_msg_t *msg);
+xmms_ipc_msg_t *xmms_ipc_msg_new (uint32_t object, uint32_t cmd) XMMS_PUBLIC;
+xmms_ipc_msg_t * xmms_ipc_msg_alloc (void) XMMS_PUBLIC;
+void xmms_ipc_msg_destroy (xmms_ipc_msg_t *msg) XMMS_PUBLIC;
 
-bool xmms_ipc_msg_write_transport (xmms_ipc_msg_t *msg, xmms_ipc_transport_t *transport, bool *disconnected);
-bool xmms_ipc_msg_read_transport (xmms_ipc_msg_t *msg, xmms_ipc_transport_t *transport, bool *disconnected);
+bool xmms_ipc_msg_write_transport (xmms_ipc_msg_t *msg, xmms_ipc_transport_t *transport, bool *disconnected) XMMS_PUBLIC;
+bool xmms_ipc_msg_read_transport (xmms_ipc_msg_t *msg, xmms_ipc_transport_t *transport, bool *disconnected) XMMS_PUBLIC;
 
-uint32_t xmms_ipc_msg_put_value (xmms_ipc_msg_t *msg, xmmsv_t* v);
+uint32_t xmms_ipc_msg_put_value (xmms_ipc_msg_t *msg, xmmsv_t* v) XMMS_PUBLIC;
 
-bool xmms_ipc_msg_get_value (xmms_ipc_msg_t *msg, xmmsv_t **val);
+bool xmms_ipc_msg_get_value (xmms_ipc_msg_t *msg, xmmsv_t **val) XMMS_PUBLIC;
 
 #endif 

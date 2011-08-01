@@ -27,4 +27,10 @@
 #define XMMS_DEPRECATED
 #endif
 
+#if defined (__GNUC__) && __GNUC__ >= 4
+#define XMMS_PUBLIC __attribute__((visibility ("default")))
+#else
+#define XMMS_PUBLIC
+#endif
+
 #endif

@@ -18,6 +18,7 @@
 #ifndef XMMS_IPC_TRANSPORT_H
 #define XMMS_IPC_TRANSPORT_H
 
+#include "xmmsc/xmmsc_compiler.h"
 #include "xmmsc/xmmsc_stdint.h"
 #include "xmmsc/xmmsc_sockets.h"
 
@@ -28,14 +29,14 @@ typedef int (*xmms_ipc_write_func) (xmms_ipc_transport_t *, char *, int);
 typedef xmms_ipc_transport_t *(*xmms_ipc_accept_func) (xmms_ipc_transport_t *);
 typedef void (*xmms_ipc_destroy_func) (xmms_ipc_transport_t *);
 
-void xmms_ipc_transport_destroy (xmms_ipc_transport_t *ipct);
-int xmms_ipc_transport_read (xmms_ipc_transport_t *ipct, char *buffer, int len);
-int xmms_ipc_transport_write (xmms_ipc_transport_t *ipct, char *buffer, int len);
-xmms_socket_t xmms_ipc_transport_fd_get (xmms_ipc_transport_t *ipct);
-xmms_ipc_transport_t * xmms_ipc_server_accept (xmms_ipc_transport_t *ipct);
-xmms_ipc_transport_t * xmms_ipc_client_init (const char *path);
-xmms_ipc_transport_t * xmms_ipc_server_init (const char *path);
-char * xmms_ipc_hostname (const char *path);
+void xmms_ipc_transport_destroy (xmms_ipc_transport_t *ipct) XMMS_PUBLIC;
+int xmms_ipc_transport_read (xmms_ipc_transport_t *ipct, char *buffer, int len) XMMS_PUBLIC;
+int xmms_ipc_transport_write (xmms_ipc_transport_t *ipct, char *buffer, int len) XMMS_PUBLIC;
+xmms_socket_t xmms_ipc_transport_fd_get (xmms_ipc_transport_t *ipct) XMMS_PUBLIC;
+xmms_ipc_transport_t * xmms_ipc_server_accept (xmms_ipc_transport_t *ipct) XMMS_PUBLIC;
+xmms_ipc_transport_t * xmms_ipc_client_init (const char *path) XMMS_PUBLIC;
+xmms_ipc_transport_t * xmms_ipc_server_init (const char *path) XMMS_PUBLIC;
+char * xmms_ipc_hostname (const char *path) XMMS_PUBLIC;
 
 struct xmms_ipc_transport_St {
 	char *path;

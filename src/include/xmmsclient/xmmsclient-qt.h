@@ -19,7 +19,6 @@
 
 #ifndef __XMMSCLIENT_QT_H__
 #define __XMMSCLIENT_QT_H__
-
 #include <qsocketnotifier.h>
 #include <qobject.h>
 #include <qlist.h>

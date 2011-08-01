@@ -21,6 +21,7 @@
 #define __XMMS_OBJECT_H__
 
 #include <glib.h>
+#include "xmmsc/xmmsc_compiler.h"
 #include "xmms/xmms_error.h"
 #include "xmmsc/xmmsc_idnumbers.h"
 #include "xmmsc/xmmsv.h"
@@ -51,13 +52,13 @@ struct xmms_object_St {
 
 
 /* Convenience wrapper to create #xmmsv_t from GLib types. */
-xmmsv_t *xmms_convert_and_kill_list (GList *list);
-xmmsv_t *xmms_convert_and_kill_dict (GTree *dict);
-xmmsv_t *xmms_convert_and_kill_string (gchar *str);
-xmmsv_t *xmms_convert_and_kill_bin (GString *gs);
+xmmsv_t *xmms_convert_and_kill_list (GList *list) XMMS_PUBLIC;
+xmmsv_t *xmms_convert_and_kill_dict (GTree *dict) XMMS_PUBLIC;
+xmmsv_t *xmms_convert_and_kill_string (gchar *str) XMMS_PUBLIC;
+xmmsv_t *xmms_convert_and_kill_bin (GString *gs) XMMS_PUBLIC;
 
-int xmms_bin_to_gstring (xmmsv_t *value, GString **gs);
-int dummy_identity (xmmsv_t *value, xmmsv_t **arg);
+int xmms_bin_to_gstring (xmmsv_t *value, GString **gs) XMMS_PUBLIC;
+int dummy_identity (xmmsv_t *value, xmmsv_t **arg) XMMS_PUBLIC;
 
 
 /** @} */
@@ -76,28 +77,28 @@ typedef void (*xmms_object_cmd_func_t) (xmms_object_t *object, xmms_object_cmd_a
 #define XMMS_OBJECT(p) ((xmms_object_t *)p)
 #define XMMS_IS_OBJECT(p) (XMMS_OBJECT (p)->id == XMMS_OBJECT_MID)
 
-void xmms_object_cleanup (xmms_object_t *object);
+void xmms_object_cleanup (xmms_object_t *object) XMMS_PUBLIC;
 
 void xmms_object_connect (xmms_object_t *object, guint32 signalid,
-			  xmms_object_handler_t handler, gpointer userdata);
+			  xmms_object_handler_t handler, gpointer userdata) XMMS_PUBLIC;
 
 void xmms_object_disconnect (xmms_object_t *object, guint32 signalid,
-			     xmms_object_handler_t handler, gpointer userdata);
+			     xmms_object_handler_t handler, gpointer userdata) XMMS_PUBLIC;
 
-void xmms_object_emit (xmms_object_t *object, guint32 signalid, xmmsv_t *data);
+void xmms_object_emit (xmms_object_t *object, guint32 signalid, xmmsv_t *data) XMMS_PUBLIC;
 
 void xmms_object_emit_f (xmms_object_t *object, guint32 signalid,
-			 xmmsv_type_t type, ...);
+			 xmmsv_type_t type, ...) XMMS_PUBLIC;
 
-void xmms_object_cmd_arg_init (xmms_object_cmd_arg_t *arg);
+void xmms_object_cmd_arg_init (xmms_object_cmd_arg_t *arg) XMMS_PUBLIC;
 
-void xmms_object_cmd_add (xmms_object_t *object, guint cmdid, const xmms_object_cmd_func_t desc);
+void xmms_object_cmd_add (xmms_object_t *object, guint cmdid, const xmms_object_cmd_func_t desc) XMMS_PUBLIC;
 
-void xmms_object_cmd_call (xmms_object_t *object, guint cmdid, xmms_object_cmd_arg_t *arg);
+void xmms_object_cmd_call (xmms_object_t *object, guint cmdid, xmms_object_cmd_arg_t *arg) XMMS_PUBLIC;
 
 
-void __int_xmms_object_unref (xmms_object_t *object);
-xmms_object_t *__int_xmms_object_new (gint size, xmms_object_destroy_func_t destfunc);
+void __int_xmms_object_unref (xmms_object_t *object) XMMS_PUBLIC;
+xmms_object_t *__int_xmms_object_new (gint size, xmms_object_destroy_func_t destfunc) XMMS_PUBLIC;
 
 #define xmms_object_ref(obj) do { \
 	if (obj && XMMS_IS_OBJECT (obj)) { \

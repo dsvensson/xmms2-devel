@@ -17,13 +17,14 @@
 #ifndef __XMMS_STRLIST_H__
 #define __XMMS_STRLIST_H__
 
+#include "xmmsc/xmmsc_compiler.h"
 #include <stdarg.h>
 
-char **xmms_valist_to_strlist (const char *first, va_list ap);
-char **xmms_vargs_to_strlist (const char *first, ...);
-int xmms_strlist_len (char **data);
-void xmms_strlist_destroy (char **data);
-char **xmms_strlist_prepend_copy (char **data, char *newstr);
-char **xmms_strlist_copy (char **strlist);
+char **xmms_valist_to_strlist (const char *first, va_list ap) XMMS_PUBLIC;
+char **xmms_vargs_to_strlist (const char *first, ...) XMMS_PUBLIC;
+int xmms_strlist_len (char **data) XMMS_PUBLIC;
+void xmms_strlist_destroy (char **data) XMMS_PUBLIC;
+char **xmms_strlist_prepend_copy (char **data, char *newstr) XMMS_PUBLIC;
+char **xmms_strlist_copy (char **strlist) XMMS_PUBLIC;
 
 #endif /* __XMMS_STRLIST_H__ */

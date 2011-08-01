@@ -324,6 +324,7 @@ def configure(conf):
     flags.disable_c_warning('format-zero-length')
 
     flags.enable_feature('diagnostics-show-option')
+    flags.enable_c_feature('visibility=hidden')
 
     flags.enable_c_error('implicit-function-declaration')
 

@@ -32,13 +32,14 @@ extern "C" {
 
 #include <sys/time.h>
 
+#include "xmmsc/xmmsc_compiler.h"
 #include "xmmsc/xmmsc_stdint.h"
 #include "xmmsc/xmmsc_sockets.h"
 
-double tv2ts (struct timeval *t);
-double net2ts (int32_t* s);
-void ts2net (int32_t* d, double t);
-void tv2net (int32_t* d, struct timeval *t);
+double tv2ts (struct timeval *t) XMMS_PUBLIC;
+double net2ts (int32_t* s) XMMS_PUBLIC;
+void ts2net (int32_t* d, double t) XMMS_PUBLIC;
+void tv2net (int32_t* d, struct timeval *t) XMMS_PUBLIC;
 
 /* Note that features should only be added to the packet data, _not_
    removed. The packet's format should stay downwardly compatible.
@@ -102,8 +103,8 @@ typedef struct {
 	int size;
 } xmmsc_vis_udp_timing_t;
 
-char* packet_init_data (xmmsc_vis_udp_data_t *p);
-char* packet_init_timing (xmmsc_vis_udp_timing_t *p);
+char* packet_init_data (xmmsc_vis_udp_data_t *p) XMMS_PUBLIC;
+char* packet_init_timing (xmmsc_vis_udp_timing_t *p) XMMS_PUBLIC;
 
 /**
  * Possible data modes
