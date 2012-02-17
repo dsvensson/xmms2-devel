@@ -40,6 +40,7 @@ source = """
     bindata.c
     sample.genpy
     utils.c
+    courier.c
     visualization/format.c
     visualization/object.c
     visualization/udp.c
@@ -58,6 +59,8 @@ ipc_object_files = """
     playlist
     visualization/object
     xform
+    courier
+    ipc_manager
 """.split()
 
 def build(bld):
