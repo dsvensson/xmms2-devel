@@ -62,6 +62,8 @@ static xmms_medialib_entry_t xmms_medialib_entry_new_insert (xmms_medialib_sessi
 
 #include "medialib_ipc.c"
 
+#define XMMS_DEFAULT_SOURCE_PREFERENCES "server:client/*:plugin/playlist:plugin/id3v2:plugin/segment:plugin/*:*"
+
 /**
  *
  * @defgroup Medialib Medialib
@@ -82,16 +84,18 @@ struct xmms_medialib_St {
 	s4_sourcepref_t *default_sp;
 };
 
-static const gchar *source_pref[] = {
-	"server",
-	"client/*",
-	"plugin/playlist",
-	"plugin/id3v2",
-	"plugin/segment",
-	"plugin/*",
-	"*",
-	NULL
-};
+static s4_sourcepref_t *
+xmms_medialib_source_preferences_from_string (const gchar *value)
+{
+	s4_sourcepref_t *sp;
+	gchar **strv;
+
+	strv = g_strsplit (value, ":", -1);
+	sp = s4_sourcepref_create ((const gchar **) strv);
+	g_strfreev (strv);
+
+	return sp;
+}
 
 static void
 xmms_medialib_destroy (xmms_object_t *object)
@@ -104,6 +108,32 @@ xmms_medialib_destroy (xmms_object_t *object)
 	s4_close (mlib->s4);
 
 	xmms_medialib_unregister_ipc_commands ();
+}
+
+
+/**
+ * Gets called when the config property "medialib.source_preferences" has changed.
+ */
+static void
+on_medialib_source_preferences_changed (xmms_object_t *object, xmmsv_t *_data, gpointer udata)
+{
+	xmms_config_property_t *prop = (xmms_config_property_t *) object;
+	xmms_medialib_t *medialib = (xmms_medialib_t *) udata;
+	s4_sourcepref_t *new_sp, *old_sp;
+	const gchar *value;
+
+	value = xmms_config_property_get_string (prop);
+
+	/* if user sets string to "", set it back to the default */
+	if (!value[0]) {
+		xmms_config_property_set_data (prop, XMMS_DEFAULT_SOURCE_PREFERENCES);
+	} else {
+		new_sp = xmms_medialib_source_preferences_from_string (value);
+		old_sp = medialib->default_sp;
+		g_atomic_pointer_set (&medialib->default_sp,
+		                      (gpointer) new_sp);
+		s4_sourcepref_unref (old_sp);
+	}
 }
 
 #define XMMS_MEDIALIB_SOURCE_SERVER "server"
@@ -120,6 +150,8 @@ xmms_medialib_init (void)
 	xmms_config_property_t *cfg;
 	xmms_medialib_t *medialib;
 	const gchar *medialib_path;
+	const gchar *value;
+
 	gchar *path;
 
 	const gchar *indices[] = {
@@ -144,7 +176,15 @@ xmms_medialib_init (void)
 
 	medialib_path = xmms_config_property_get_string (cfg);
 	medialib->s4 = xmms_medialib_database_open (medialib_path, indices);
-	medialib->default_sp = s4_sourcepref_create (source_pref);
+
+	cfg = xmms_config_property_register ("medialib.source_preferences",
+	                                     XMMS_DEFAULT_SOURCE_PREFERENCES,
+	                                     on_medialib_source_preferences_changed,
+	                                     (gpointer) medialib);
+
+	value = xmms_config_property_get_string (cfg);
+
+	medialib->default_sp = xmms_medialib_source_preferences_from_string (value);
 
 	return medialib;
 }
