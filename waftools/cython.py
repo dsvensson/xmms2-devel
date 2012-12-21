@@ -33,7 +33,7 @@ def add_cython_file(self, node):
 	self.source += tsk.outputs
 
 class cython(Task.Task):
-	run_str = '${CYTHON} ${CYTHONFLAGS} -o ${TGT[0].abspath()} ${SRC}'
+	run_str = '${CYTHON} -Xembedsignature=True ${CYTHONFLAGS} -o ${TGT[0].abspath()} ${SRC}'
 	color   = 'BLUE'
 
 	vars    = ['INCLUDES']

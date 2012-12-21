@@ -117,22 +117,23 @@ cdef class XmmsValue:
 	cpdef iserror(self):
 		"""
 		@deprecated
-		@return: Whether the value represents an error or not.
-		@rtype: Boolean
+
+		:returns: Whether the value represents an error or not.
+		:rtype: Boolean
 		"""
 		return self.is_error()
 
 	cpdef is_error(self):
 		"""
-		@return: Whether the value represents an error or not.
-		@rtype: Boolean
+		:returns: Whether the value represents an error or not.
+		:rtype: Boolean
 		"""
 		return xmmsv_is_error(self.val)
 
 	cpdef get_error(self):
 		"""
-		@return: Error string from the result.
-		@rtype: String
+		:returns: Error string from the result.
+		:rtype: String
 		"""
 		cdef char *ret = NULL
 		if not xmmsv_get_error(self.val, <const_char **>&ret):
@@ -142,7 +143,8 @@ cdef class XmmsValue:
 	cpdef get_int(self):
 		"""
 		Get data from the result structure as an int.
-		@rtype: int
+
+		:rtype: int
 		"""
 		cdef int ret = 0
 		if not xmmsv_get_int(self.val, &ret):
@@ -152,7 +154,8 @@ cdef class XmmsValue:
 	cpdef get_string(self):
 		"""
 		Get data from the result structure as a string.
-		@rtype: string
+
+		:rtype: string
 		"""
 		cdef char *ret = NULL
 		if not xmmsv_get_string(self.val, <const_char **>&ret):
@@ -162,7 +165,8 @@ cdef class XmmsValue:
 	cpdef get_bin(self):
 		"""
 		Get data from the result structure as binary data.
-		@rtype: string
+
+		:rtype: string
 		"""
 		cdef char *ret = NULL
 		cdef unsigned int rlen = 0
@@ -173,7 +177,8 @@ cdef class XmmsValue:
 	cpdef get_coll(self):
 		"""
 		Get data from the result structure as a Collection.
-		@rtype: Collection
+
+		:rtype: Collection
 		"""
 		cdef xmmsv_coll_t *coll = NULL
 		if not xmmsv_get_coll(self.val, &coll):
@@ -182,19 +187,19 @@ cdef class XmmsValue:
 
 	cpdef get_dict(self):
 		"""
-		@return: A dictionary containing media info.
+		:return: A dictionary containing media info.
 		"""
 		return dict([(k, v.value()) for k,v in self.get_dict_iter()])
 
 	cpdef get_dict_iter(self):
 		"""
-		@return: An iterator on dict items ((key, value) pairs).
+		:return: An iterator on dict items ((key, value) pairs).
 		"""
 		return XmmsDictIter(self)
 
 	cpdef get_propdict(self):
 		"""
-		@return: A source dict.
+		:return: A source dict.
 		"""
 		ret = PropDict(self.sourcepref)
 		for key, values in self.get_dict_iter():
@@ -204,13 +209,13 @@ cdef class XmmsValue:
 
 	cpdef get_list(self):
 		"""
-		@return: A list of dicts from the result structure.
+		:return: A list of dicts from the result structure.
 		"""
 		return [v.value() for v in self.get_list_iter()]
 
 	cpdef get_list_iter(self):
 		"""
-		@return: An iterator on a list.
+		:return: An iterator on a list.
 		"""
 		return XmmsListIter(self)
 
