@@ -661,17 +661,38 @@ cli_server_volume (cli_context_t *ctx, command_t *cmd)
 	return FALSE;
 }
 
+#define MSEC_PER_SEC (1000L)
+#define MSEC_PER_MIN (MSEC_PER_SEC * 60L)
+#define MSEC_PER_HOUR (MSEC_PER_MIN * 60L)
+#define MSEC_PER_DAY ( MSEC_PER_HOUR * 24L)
+
 static void
 cli_server_stats_print (xmmsv_t *val)
 {
 	const gchar *version;
-	gint uptime;
+	gint uptime, days, hours, minutes, seconds;
+	int64_t size, duration;
+	double size_gigs;
+
+	duration = 0;
 
 	xmmsv_dict_entry_get_string (val, "version", &version);
 	xmmsv_dict_entry_get_int (val, "uptime", &uptime);
+	xmmsv_dict_entry_get_int64 (val, "size", &size);
+	xmmsv_dict_entry_get_int64 (val, "duration", &duration);
+
+	size_gigs = size * 1.0 / 1024 / 1024 / 1024;
+
+	days = duration / MSEC_PER_DAY;
+	hours = (duration % MSEC_PER_DAY) / MSEC_PER_HOUR;
+	minutes = ((duration % MSEC_PER_DAY) % MSEC_PER_HOUR) / MSEC_PER_MIN;
+	seconds = (((duration % MSEC_PER_DAY) % MSEC_PER_HOUR) % MSEC_PER_MIN) / MSEC_PER_SEC;
 
 	g_printf ("uptime = %d\n"
-	          "version = %s\n", uptime, version);
+	          "version = %s\n"
+	          "size = %.2fGB\n"
+	          "duration = %d days, %d hours, %d minutes, and %d seconds\n",
+	          uptime, version, size_gigs, days, hours, minutes, seconds);
 }
 
 gboolean

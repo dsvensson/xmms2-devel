@@ -116,9 +116,54 @@ xmms_main_client_stats (xmms_object_t *object, xmms_error_t *error)
 {
 	xmms_main_t *mainobj = (xmms_main_t *) object;
 	gint uptime = time (NULL) - mainobj->starttime;
+	xmmsv_t *coll, *spec, *ret;
+	xmms_medialib_session_t *session;
+	int64_t size, duration;
+
+	/* Fetch the size in bytes and duration in milliseconds for the whole media library */
+	coll = xmmsv_new_coll (XMMS_COLLECTION_TYPE_UNIVERSE);
+
+	spec = xmmsv_build_dict (
+		XMMSV_DICT_ENTRY_STR ("type", "organize"),
+		XMMSV_DICT_ENTRY ("data", xmmsv_build_dict (
+			XMMSV_DICT_ENTRY ("size", xmmsv_build_dict (
+				XMMSV_DICT_ENTRY_STR ("type", "metadata"),
+				XMMSV_DICT_ENTRY ("fields", xmmsv_build_list (
+					XMMSV_LIST_ENTRY_STR ("size"),
+					XMMSV_LIST_END)),
+				XMMSV_DICT_ENTRY ("get", xmmsv_build_list (
+					XMMSV_LIST_ENTRY_STR ("value"),
+					XMMSV_LIST_END)),
+				XMMSV_DICT_ENTRY_STR ("aggregate", "sum"),
+				XMMSV_DICT_END)),
+			XMMSV_DICT_ENTRY ("duration", xmmsv_build_dict (
+				XMMSV_DICT_ENTRY_STR ("type", "metadata"),
+				XMMSV_DICT_ENTRY ("fields", xmmsv_build_list (
+					XMMSV_LIST_ENTRY_STR ("duration"),
+					XMMSV_LIST_END)),
+				XMMSV_DICT_ENTRY ("get", xmmsv_build_list (
+					XMMSV_LIST_ENTRY_STR ("value"),
+					XMMSV_LIST_END)),
+				XMMSV_DICT_ENTRY_STR ("aggregate", "sum"),
+				XMMSV_DICT_END)),
+			XMMSV_DICT_END)),
+		XMMSV_DICT_END);
+
+	do {
+		session = xmms_medialib_session_begin_ro (mainobj->medialib_object);
+		ret = xmms_medialib_query (session, coll, spec, error);
+	} while (!xmms_medialib_session_commit (session));
+
+	xmmsv_dict_entry_get_int64 (ret, "size", &size);
+	xmmsv_dict_entry_get_int64 (ret, "duration", &duration);
+
+	xmmsv_unref (spec);
+	xmmsv_unref (ret);
 
 	return xmmsv_build_dict (XMMSV_DICT_ENTRY_STR ("version", XMMS_VERSION),
 	                         XMMSV_DICT_ENTRY_INT ("uptime", uptime),
+	                         XMMSV_DICT_ENTRY_INT ("size", size),
+	                         XMMSV_DICT_ENTRY_INT ("duration", duration),
 	                         XMMSV_DICT_END);
 }
 
