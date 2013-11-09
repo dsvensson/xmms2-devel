@@ -42,7 +42,7 @@ xmms_converter_plugin_init (xmms_xform_t *xform)
 	const GList *goal_hints;
 
 	intype = xmms_xform_intype_get (xform);
-	goal_hints = xmms_xform_goal_hints_get (xform);
+	goal_hints = xmms_xform_stream_type_goals (xform);
 
 	to = xmms_stream_type_coerce (intype, goal_hints);
 	if (!to) {

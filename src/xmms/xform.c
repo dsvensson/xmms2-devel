@@ -1183,7 +1183,7 @@ xmms_xform_get_out_stream_type (xmms_xform_t *xform)
 }
 
 const GList *
-xmms_xform_goal_hints_get (xmms_xform_t *xform)
+xmms_xform_stream_type_goals (xmms_xform_t *xform)
 {
 	return xform->goal_hints;
 }
