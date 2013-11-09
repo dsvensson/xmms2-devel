@@ -41,7 +41,7 @@ gint64 xmms_xform_this_seek (xmms_xform_t *xform, gint64 offset, xmms_xform_seek
 int xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, int siz, xmms_error_t *err);
 gboolean xmms_xform_iseos (xmms_xform_t *xform);
 
-const GList *xmms_xform_goal_hints_get (xmms_xform_t *xform);
+const GList *xmms_xform_stream_type_goals (xmms_xform_t *xform);
 xmms_stream_type_t *xmms_xform_intype_get (xmms_xform_t *xform);
 
 void xmms_xform_outdata_type_set (xmms_xform_t *xform, xmms_stream_type_t *type);
