@@ -39,6 +39,10 @@ test_xform_src = """
 server/t_xform.c
 """.split()
 
+test_token_manager_src = """
+server/t_token_manager.c
+""".split()
+
 mlib_runner_src = """
 server/medialib-runner.c
 """.split()
@@ -145,6 +149,15 @@ def build(bld):
             uselib = "cunit ncurses glib2 gmodule2 gthread2 DISABLE_WRITESTRINGS",
             install_path = None
             )
+
+        bld(features = "c cprogram test",
+            target = "test_token_manager",
+            source = test_token_manager_src,
+            includes = '. .. runner ../src ../src/includepriv ../src/include',
+            use = "xmms2core xmmsipc xmmssocket xmmstypes xmmsutils s4 testutils testserverutils",
+            uselib = "cunit ncurses glib2 gmodule2 gthread2 DISABLE_WRITESTRINGS",
+            install_path = None
+        )
 
         bld(features = "c cprogram test",
             target = "medialib-runner",
