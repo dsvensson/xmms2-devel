@@ -32,6 +32,11 @@ xmms_stream_type_t *xmms_xform_outtype_get (xmms_xform_t *xform);
 xmms_plugin_t *xmms_xform_plugin_new (void);
 gboolean xmms_xform_plugin_verify (xmms_plugin_t *plugin);
 
+/* TODO: Remove me */
+void xmms_xform_metadata_collect (xmms_medialib_session_t *session, xmms_xform_t *start, GString *namestr, gboolean rehashing);
+/* TODO: Remove me */
+xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals);
+
 xmms_xform_t *xmms_xform_chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
 xmms_xform_t *xmms_xform_chain_setup_session (xmms_medialib_t *medialib, xmms_medialib_session_t *session, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
 xmms_xform_t *xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib, xmms_medialib_session_t *session, xmms_medialib_entry_t entry, const gchar *url, GPtrArray *stream_type_goals, gboolean rehash);
