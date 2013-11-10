@@ -29,6 +29,7 @@ source = """
     plugin.c
     magic.c
     ringbuf.c
+    token_manager.c
     xform.c
     xform_chain.c
     xform_object.c
