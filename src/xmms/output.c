@@ -259,7 +259,7 @@ song_changed (void *data)
 	xmms_medialib_entry_t entry;
 	xmms_stream_type_t *type;
 
-	entry = xmms_xform_entry_get (arg->chain);
+	xmms_xform_metadata_get_int (arg->chain, XMMS_MEDIALIB_ENTRY_PROPERTY_ID, &entry);
 
 	XMMS_DBG ("Running hotspot! Song changed!! %d", entry);
 
@@ -342,12 +342,15 @@ xmms_output_filler (void *arg)
 {
 	xmms_output_t *output = (xmms_output_t *)arg;
 	xmms_xform_t *chain = NULL;
+	xmms_xform_token_t last_token, token;
 	gboolean last_was_kill = FALSE;
 	char buf[4096];
 	xmms_error_t err;
 	gint ret;
 
 	xmms_error_reset (&err);
+
+	last_token = token = 0;
 
 	g_mutex_lock (&output->filler_mutex);
 	while (output->filler_state != FILLER_QUIT) {
@@ -455,7 +458,7 @@ xmms_output_filler (void *arg)
 		}
 		g_mutex_unlock (&output->filler_mutex);
 
-		ret = xmms_xform_this_read (chain, buf, sizeof (buf), &err);
+		ret = xmms_xform_this_read (chain, buf, sizeof (buf), &token, &err);
 
 		g_mutex_lock (&output->filler_mutex);
 

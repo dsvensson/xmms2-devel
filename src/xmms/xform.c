@@ -24,7 +24,6 @@
 #include <xmmspriv/xmms_plugin.h>
 #include <xmmspriv/xmms_xform.h>
 #include <xmmspriv/xmms_streamtype.h>
-#include <xmmspriv/xmms_medialib.h>
 #include <xmmspriv/xmms_utils.h>
 #include <xmmspriv/xmms_xform_plugin.h>
 #include <xmms/xmms_ipc.h>
@@ -36,9 +35,11 @@ struct xmms_xform_St {
 	struct xmms_xform_St *prev;
 
 	const xmms_xform_plugin_t *plugin;
-	xmms_medialib_entry_t entry;
 
-	xmms_medialib_t *medialib;
+	guint8 order;
+
+	xmms_xform_token_manager_t *manager;
+	xmms_xform_token_t token;
 
 	gboolean inited;
 
@@ -54,11 +55,6 @@ struct xmms_xform_St {
 	char *buffer;
 	gint buffered;
 	gint buffersize;
-
-	gboolean metadata_collected;
-
-	gboolean metadata_changed;
-	GHashTable *metadata;
 
 	GHashTable *privdata;
 	GQueue *hotspots;
@@ -83,10 +79,43 @@ typedef struct xmms_xform_hotspot_St {
 #define READ_CHUNK 4096
 
 
-xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry,
-                               GPtrArray *stream_type_goals);
 const char *xmms_xform_shortname (xmms_xform_t *xform);
 static void xmms_xform_destroy (xmms_object_t *object);
+
+static xmms_xform_t *
+xmms_xform_directory_listing_trampoline_new (const gchar *url)
+{
+	xmms_xform_t *xform;
+
+	xform = xmms_object_new (xmms_xform_t, xmms_xform_destroy);
+
+	xmms_xform_outdata_type_add (xform,
+	                             XMMS_STREAM_TYPE_MIMETYPE, "application/x-url",
+	                             XMMS_STREAM_TYPE_URL, url,
+	                             XMMS_STREAM_TYPE_END);
+	return xform;
+}
+
+static xmms_xform_t *
+xmms_xform_playlist_entries_trampoline_new (const gchar *url)
+{
+	xmms_stream_type_t *stream_type;
+	GPtrArray *stream_type_goals;
+	xmms_xform_t *xform;
+
+	stream_type = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                                    XMMS_STREAM_TYPE_MIMETYPE,
+	                                    "application/x-xmms2-playlist-entries",
+	                                    XMMS_STREAM_TYPE_END);
+
+	stream_type_goals = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
+	g_ptr_array_add (stream_type_goals, stream_type);
+
+	xform = xmms_xform_directory_listing_trampoline_new (url);
+	xform->stream_type_goals = stream_type_goals;
+
+	return xform;
+}
 
 void
 xmms_xform_browse_add_entry_property_str (xmms_xform_t *xform,
@@ -262,40 +291,29 @@ xmms_xform_browse_method (xmms_xform_t *xform, const gchar *url,
 xmmsv_t *
 xmms_xform_browse (const gchar *url, xmms_error_t *error)
 {
-	xmmsv_t *list = NULL;
-	gchar *durl;
-	xmms_xform_t *xform = NULL;
-	xmms_xform_t *xform2 = NULL;
+	xmms_xform_token_manager_t *manager;
+	xmms_xform_t *trampoline, *xform;
+	xmmsv_t *list;
 
-	xform = xmms_xform_new (NULL, NULL, NULL, 0, NULL);
+	manager = xmms_xform_token_manager_new (NULL);
+	trampoline = xmms_xform_directory_listing_trampoline_new (url);
 
-	durl = g_strdup (url);
-	xmms_medialib_decode_url (durl);
-	XMMS_DBG ("url = %s", durl);
+	xform = xmms_xform_find (trampoline, manager, NULL);
+	xmms_object_unref (trampoline);
 
-	xmms_xform_outdata_type_add (xform,
-	                             XMMS_STREAM_TYPE_MIMETYPE,
-	                             "application/x-url",
-	                             XMMS_STREAM_TYPE_URL,
-	                             durl,
-	                             XMMS_STREAM_TYPE_END);
-
-	xform2 = xmms_xform_find (xform, 0, NULL);
-	if (xform2) {
-		XMMS_DBG ("found xform %s", xmms_xform_shortname (xform2));
-	} else {
+	if (!xform) {
 		xmms_error_set (error, XMMS_ERROR_GENERIC, "Couldn't handle that URL");
 		xmms_object_unref (xform);
-		g_free (durl);
+		xmms_xform_token_manager_free (manager);
 		return NULL;
 	}
 
-	list = xmms_xform_browse_method (xform2, durl, error);
+	XMMS_DBG ("found xform %s", xmms_xform_shortname (xform));
+
+	list = xmms_xform_browse_method (xform, url, error);
 
 	xmms_object_unref (xform);
-	xmms_object_unref (xform2);
-
-	g_free (durl);
+	xmms_xform_token_manager_free (manager);
 
 	return list;
 }
@@ -318,12 +336,17 @@ xmms_xform_destroy (xmms_object_t *object)
 		g_ptr_array_unref (xform->stream_type_goals);
 	}
 
-	g_hash_table_destroy (xform->metadata);
+	if (xform->privdata) {
+		g_hash_table_destroy (xform->privdata);
+	}
 
-	g_hash_table_destroy (xform->privdata);
-	g_queue_free (xform->hotspots);
+	if (xform->hotspots) {
+		g_queue_free (xform->hotspots);
+	}
 
-	g_free (xform->buffer);
+	if (xform->buffer) {
+		g_free (xform->buffer);
+	}
 
 	xmms_object_unref (xform->out_type);
 	xmms_object_unref (xform->plugin);
@@ -336,17 +359,19 @@ xmms_xform_destroy (xmms_object_t *object)
 
 xmms_xform_t *
 xmms_xform_new (xmms_xform_plugin_t *plugin, xmms_xform_t *prev,
-                xmms_medialib_t *medialib, xmms_medialib_entry_t entry,
+                xmms_xform_token_manager_t *manager,
                 GPtrArray *stream_type_goals)
 {
 	xmms_xform_t *xform;
+
+	g_return_val_if_fail (plugin, NULL);
+	g_return_val_if_fail (manager, NULL);
 
 	xform = xmms_object_new (xmms_xform_t, xmms_xform_destroy);
 
 	xmms_object_ref (plugin);
 	xform->plugin = plugin;
-	xform->entry = entry;
-	xform->medialib = medialib;
+	xform->manager = manager;
 	xform->lr.bufend = &xform->lr.buf[0];
 
 	if (stream_type_goals) {
@@ -358,34 +383,24 @@ xmms_xform_new (xmms_xform_plugin_t *plugin, xmms_xform_t *prev,
 		xform->prev = prev;
 	}
 
-	xform->metadata = g_hash_table_new_full (g_str_hash, g_str_equal,
-	                                         g_free,
-	                                         (GDestroyNotify) xmmsv_unref);
-
 	xform->privdata = g_hash_table_new_full (g_str_hash, g_str_equal,
 	                                         g_free,
 	                                         (GDestroyNotify) xmmsv_unref);
 	xform->hotspots = g_queue_new ();
 
-	if (plugin && entry) {
-		if (!xmms_xform_plugin_init (xform->plugin, xform)) {
-			xmms_object_unref (xform);
-			return NULL;
-		}
-		xform->inited = TRUE;
-		g_return_val_if_fail (xform->out_type, NULL);
+	if (!xmms_xform_plugin_init (xform->plugin, xform)) {
+		xmms_object_unref (xform);
+		return NULL;
 	}
+
+	xform->inited = TRUE;
+
+	g_return_val_if_fail (xform->out_type, NULL);
 
 	xform->buffer = g_malloc (READ_CHUNK);
 	xform->buffersize = READ_CHUNK;
 
 	return xform;
-}
-
-xmms_medialib_entry_t
-xmms_xform_entry_get (xmms_xform_t *xform)
-{
-	return xform->entry;
 }
 
 gpointer
@@ -481,11 +496,11 @@ xmms_xform_metadata_mapper_match (xmms_xform_t *xform, const gchar *key, const g
 }
 
 gboolean
-xmms_xform_metadata_set_int (xmms_xform_t *xform, const char *key, int val)
+xmms_xform_metadata_set_int (xmms_xform_t *xform, const char *key, int64_t value)
 {
-	g_hash_table_insert (xform->metadata, g_strdup (key),
-	                     xmmsv_new_int (val));
-	xform->metadata_changed = TRUE;
+	xform->token = xmms_xform_token_manager_set_persistent_int (xform->manager, xform->order,
+	                                                            xmms_xform_shortname (xform),
+	                                                            key, value);
 	return TRUE;
 }
 
@@ -493,219 +508,45 @@ gboolean
 xmms_xform_metadata_set_str (xmms_xform_t *xform, const char *key,
                              const char *val)
 {
-	const char *old;
-
 	if (!g_utf8_validate (val, -1, NULL)) {
 		xmms_log_error ("xform '%s' tried to set property '%s' to a NON UTF-8 string!", xmms_xform_shortname (xform), key);
 		return FALSE;
 	}
 
-	if (xmms_xform_metadata_get_str (xform, key, &old)) {
-		if (strcmp (old, val) == 0) {
-			return TRUE;
-		}
-	}
-
-	g_hash_table_insert (xform->metadata, g_strdup (key),
-	                     xmmsv_new_string (val));
-
-	xform->metadata_changed = TRUE;
-
+	xform->token = xmms_xform_token_manager_set_persistent_string (xform->manager, xform->order,
+	                                                               xmms_xform_shortname (xform),
+	                                                               key, val);
 	return TRUE;
-}
-
-static const xmmsv_t *
-xmms_xform_metadata_get_val (xmms_xform_t *xform, const char *key)
-{
-	xmmsv_t *val = NULL;
-
-	for (; xform; xform = xform->prev) {
-		val = g_hash_table_lookup (xform->metadata, key);
-		if (val) {
-			break;
-		}
-	}
-
-	return val;
 }
 
 gboolean
 xmms_xform_metadata_has_val (xmms_xform_t *xform, const gchar *key)
 {
-	return !!xmms_xform_metadata_get_val (xform, key);
+	return xmms_xform_token_manager_has_value (xform->manager, xform->token, xform->order,
+	                                           xmms_xform_shortname (xform), key);
 }
 
 gboolean
-xmms_xform_metadata_get_int (xmms_xform_t *xform, const char *key,
-                             gint32 *val)
+xmms_xform_metadata_get_int (xmms_xform_t *xform, const char *key, gint32 *val)
 {
-	const xmmsv_t *obj;
-	gboolean ret = FALSE;
+	gboolean result = FALSE;
+	int64_t v;
 
-	obj = xmms_xform_metadata_get_val (xform, key);
-	if (obj && xmmsv_get_type (obj) == XMMSV_TYPE_INT32) {
-		xmmsv_get_int (obj, val);
-		ret = TRUE;
+	result = xmms_xform_token_manager_get_int (xform->manager, xform->token, xform->order,
+	                                           xmms_xform_shortname (xform), key, &v);
+	if (result) {
+		*val = MAX (MIN (v, G_MAXINT32), G_MININT32);
 	}
 
-	return ret;
+	return result;
 }
 
 gboolean
 xmms_xform_metadata_get_str (xmms_xform_t *xform, const char *key,
-                             const gchar **val)
+                             gchar **val)
 {
-	const xmmsv_t *obj;
-	gboolean ret = FALSE;
-
-	obj = xmms_xform_metadata_get_val (xform, key);
-	if (obj && xmmsv_get_type (obj) == XMMSV_TYPE_STRING) {
-		xmmsv_get_string (obj, val);
-		ret = TRUE;
-	}
-
-	return ret;
-}
-
-typedef struct {
-	xmms_medialib_entry_t entry;
-	xmms_medialib_session_t *session;
-	gchar *source;
-} metadata_festate_t;
-
-static void
-add_metadatum (gpointer _key, gpointer _value, gpointer user_data)
-{
-	xmmsv_t *value = (xmmsv_t *) _value;
-	gchar *key = (gchar *) _key;
-	metadata_festate_t *st = (metadata_festate_t *) user_data;
-
-	if (xmmsv_get_type (value) == XMMSV_TYPE_STRING) {
-		const gchar *s;
-		xmmsv_get_string (value, &s);
-		xmms_medialib_entry_property_set_str_source (st->session,
-		                                             st->entry,
-		                                             key,
-		                                             s,
-		                                             st->source);
-	} else if (xmmsv_get_type (value) == XMMSV_TYPE_INT32) {
-		gint i;
-		xmmsv_get_int (value, &i);
-		xmms_medialib_entry_property_set_int_source (st->session,
-		                                             st->entry,
-		                                             key,
-		                                             i,
-		                                             st->source);
-	} else {
-		XMMS_DBG ("Unknown type?!?");
-	}
-}
-
-static void
-xmms_xform_metadata_collect_one (xmms_xform_t *xform, metadata_festate_t *info)
-{
-	gchar src[XMMS_PLUGIN_SHORTNAME_MAX_LEN + 8];
-
-	XMMS_DBG ("Collecting metadata from %s", xmms_xform_shortname (xform));
-
-	g_snprintf (src, sizeof (src), "plugin/%s",
-	            xmms_xform_shortname (xform));
-
-	info->source = src;
-	g_hash_table_foreach (xform->metadata, add_metadatum, info);
-	info->source = NULL;
-
-	xform->metadata_changed = FALSE;
-}
-
-static void
-xmms_xform_metadata_collect_r (xmms_xform_t *xform, metadata_festate_t *info,
-                               GString *namestr)
-{
-	if (xform->prev) {
-		xmms_xform_metadata_collect_r (xform->prev, info, namestr);
-	}
-
-	if (xform->plugin) {
-		if (namestr->len) {
-			g_string_append_c (namestr, ':');
-		}
-		g_string_append (namestr, xmms_xform_shortname (xform));
-	}
-
-	if (xform->metadata_changed) {
-		xmms_xform_metadata_collect_one (xform, info);
-	}
-
-	xform->metadata_collected = TRUE;
-}
-
-void
-xmms_xform_metadata_collect (xmms_medialib_session_t *session,
-                             xmms_xform_t *start, GString *namestr,
-                             gboolean rehashing)
-{
-	metadata_festate_t info;
-	gint times_played;
-	gint last_started;
-	GTimeVal now;
-
-	info.entry = start->entry;
-
-	info.session = session;
-	times_played = xmms_medialib_entry_property_get_int (session, info.entry,
-	                                                     XMMS_MEDIALIB_ENTRY_PROPERTY_TIMESPLAYED);
-
-	/* times_played == -1 if we haven't played this entry yet. so after initial
-	 * metadata collection the mlib would have timesplayed = -1 if we didn't do
-	 * the following */
-	if (times_played < 0) {
-		times_played = 0;
-	}
-
-	last_started = xmms_medialib_entry_property_get_int (session, info.entry,
-	                                                     XMMS_MEDIALIB_ENTRY_PROPERTY_LASTSTARTED);
-
-	xmms_medialib_entry_cleanup (session, info.entry);
-
-	xmms_xform_metadata_collect_r (start, &info, namestr);
-
-	xmms_medialib_entry_property_set_str (session, info.entry,
-	                                      XMMS_MEDIALIB_ENTRY_PROPERTY_CHAIN,
-	                                      namestr->str);
-
-	xmms_medialib_entry_property_set_int (session, info.entry,
-	                                      XMMS_MEDIALIB_ENTRY_PROPERTY_TIMESPLAYED,
-	                                      times_played + (rehashing ? 0 : 1));
-
-	if (!rehashing || (rehashing && last_started)) {
-		g_get_current_time (&now);
-
-		xmms_medialib_entry_property_set_int (session, info.entry,
-		                                      XMMS_MEDIALIB_ENTRY_PROPERTY_LASTSTARTED,
-		                                      (rehashing ? last_started : now.tv_sec));
-	}
-
-	xmms_medialib_entry_status_set (session, info.entry,
-	                                XMMS_MEDIALIB_ENTRY_STATUS_OK);
-}
-
-static void
-xmms_xform_metadata_update (xmms_xform_t *xform)
-{
-	xmms_medialib_session_t *session;
-	metadata_festate_t info;
-
-	g_return_if_fail (xform->medialib);
-
-	do {
-		session = xmms_medialib_session_begin (xform->medialib);
-
-		info.entry = xform->entry;
-		info.session = session;
-
-		xmms_xform_metadata_collect_one (xform, &info);
-	} while (!xmms_medialib_session_commit (session));
+	return xmms_xform_token_manager_get_string (xform->manager, xform->token, xform->order,
+	                                            xmms_xform_shortname (xform), key, val);
 }
 
 static void
@@ -904,7 +745,7 @@ xmms_xform_hotspots_update (xmms_xform_t *xform)
 
 gint
 xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, gint siz,
-                      xmms_error_t *err)
+                      xmms_xform_token_t *token, xmms_error_t *err)
 {
 	gint read = 0;
 	gint nexths;
@@ -943,13 +784,13 @@ xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, gint siz,
 		gint res;
 
 		res = xmms_xform_plugin_read (xform->plugin, xform, buf + read, siz - read, err);
-		if (xform->metadata_collected && xform->metadata_changed)
-			xmms_xform_metadata_update (xform);
-
 		if (res < -1) {
 			XMMS_DBG ("Read method of %s returned bad value (%d) - BUG IN PLUGIN", xmms_xform_shortname (xform), res);
 			res = -1;
 		}
+
+		if (xform->prev->token > xform->token)
+			xform->token = xform->prev->token;
 
 		if (res == 0) {
 			xform->eos = TRUE;
@@ -976,6 +817,8 @@ xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, gint siz,
 			read += res;
 		}
 	}
+
+	*token = xform->token;
 
 	return read;
 }
@@ -1076,7 +919,7 @@ gint
 xmms_xform_read (xmms_xform_t *xform, gpointer buf, gint siz, xmms_error_t *err)
 {
 	g_return_val_if_fail (xform->prev, -1);
-	return xmms_xform_this_read (xform->prev, buf, siz, err);
+	return xmms_xform_this_read (xform->prev, buf, siz, &xform->token, err);
 }
 
 gint64
@@ -1143,7 +986,7 @@ xmms_xform_match (xmms_plugin_t *plugin, gpointer user_data)
 }
 
 xmms_xform_t *
-xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry,
+xmms_xform_find (xmms_xform_t *prev, xmms_xform_token_manager_t *manager,
                  GPtrArray *stream_type_goals)
 {
 	match_state_t state;
@@ -1156,7 +999,7 @@ xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry,
 	xmms_plugin_foreach (XMMS_PLUGIN_TYPE_XFORM, xmms_xform_match, &state);
 
 	if (state.match) {
-		xform = xmms_xform_new (state.match, prev, prev->medialib, entry, stream_type_goals);
+		xform = xmms_xform_new (state.match, prev, manager, stream_type_goals);
 	} else {
 		XMMS_DBG ("Found no matching plugin...");
 	}

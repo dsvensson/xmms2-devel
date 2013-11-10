@@ -186,7 +186,7 @@ xmms_gme_init (xmms_xform_t *xform)
 	xmms_config_property_t *val;
 	int loops;
 	int maxlength;
-	const char *subtune_str;
+	char *subtune_str;
 	int subtune = 0;
 	long fadelen = -1;
 	int samplerate;
@@ -245,6 +245,7 @@ xmms_gme_init (xmms_xform_t *xform)
 
 	if (xmms_xform_metadata_get_str (xform, "subtune", &subtune_str)) {
 		subtune = strtol (subtune_str, NULL, 10);
+		g_free (subtune_str);
 		XMMS_DBG ("Setting subtune to %d", subtune);
 		if ((subtune < 0 || subtune > gme_track_count (data->emu))) {
 			XMMS_DBG ("Invalid subtune index");

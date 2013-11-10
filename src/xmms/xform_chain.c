@@ -25,13 +25,62 @@
 #include <xmmspriv/xmms_xform_plugin.h>
 
 
-static xmms_xform_t *add_effects (xmms_xform_t *last, xmms_medialib_t *medialib,
-                                  xmms_medialib_entry_t entry,
+static xmms_xform_t *add_effects (xmms_xform_t *last, xmms_xform_token_manager_t *manager,
                                   GPtrArray *stream_type_goals);
-static xmms_xform_t *xmms_xform_new_effect (xmms_xform_t* last, xmms_medialib_t *medialib,
-                                            xmms_medialib_entry_t entry,
-                                            GPtrArray *stream_type_goals,
-                                            const gchar *name);
+static xmms_xform_t *xmms_xform_new_effect (xmms_xform_t* last, xmms_xform_token_manager_t *manager,
+                                            GPtrArray *stream_type_goals, const gchar *name);
+
+/*
+void
+xmms_xform_metadata_collect (xmms_medialib_session_t *session,
+                             xmms_xform_t *start, GString *namestr,
+                             gboolean rehashing)
+{
+	metadata_festate_t info;
+	gint times_played;
+	gint last_started;
+	GTimeVal now;
+
+	info.entry = start->entry;
+
+	info.session = session;
+	times_played = xmms_medialib_entry_property_get_int (session, info.entry,
+	                                                     XMMS_MEDIALIB_ENTRY_PROPERTY_TIMESPLAYED);
+
+	// times_played == -1 if we haven't played this entry yet. so after initial
+	//  metadata collection the mlib would have timesplayed = -1 if we didn't do
+	// the following
+	if (times_played < 0) {
+		times_played = 0;
+	}
+
+	last_started = xmms_medialib_entry_property_get_int (session, info.entry,
+	                                                     XMMS_MEDIALIB_ENTRY_PROPERTY_LASTSTARTED);
+
+	xmms_medialib_entry_cleanup (session, info.entry);
+
+	xmms_xform_metadata_collect_r (start, &info, namestr);
+
+	xmms_medialib_entry_property_set_str (session, info.entry,
+	                                      XMMS_MEDIALIB_ENTRY_PROPERTY_CHAIN,
+	                                      namestr->str);
+
+	xmms_medialib_entry_property_set_int (session, info.entry,
+	                                      XMMS_MEDIALIB_ENTRY_PROPERTY_TIMESPLAYED,
+	                                      times_played + (rehashing ? 0 : 1));
+
+	if (!rehashing || (rehashing && last_started)) {
+		g_get_current_time (&now);
+
+		xmms_medialib_entry_property_set_int (session, info.entry,
+		                                      XMMS_MEDIALIB_ENTRY_PROPERTY_LASTSTARTED,
+		                                      (rehashing ? last_started : now.tv_sec));
+	}
+
+	xmms_medialib_entry_status_set (session, info.entry,
+	                                XMMS_MEDIALIB_ENTRY_STATUS_OK);
+}
+*/
 
 static gboolean
 has_goalformat (xmms_xform_t *xform, GPtrArray *stream_type_goals)
@@ -54,7 +103,7 @@ has_goalformat (xmms_xform_t *xform, GPtrArray *stream_type_goals)
 	}
 
 	if (!ret) {
-		XMMS_DBG ("Not in one of %d goal-types", g_list_length (stream_type_goals));
+		XMMS_DBG ("Not in one of %d goal-types", stream_type_goals->len);
 	}
 
 	return ret;
@@ -97,17 +146,13 @@ outdata_type_metadata_collect (xmms_xform_t *xform)
 }
 
 static xmms_xform_t *
-chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry,
-             const gchar *url, GPtrArray *stream_type_goals)
+chain_setup (xmms_xform_token_manager_t *manager, const gchar *url,
+             GPtrArray *stream_type_goals)
 {
 	xmms_xform_t *xform, *last;
 	gchar *durl, *args;
 
-	if (!entry) {
-		entry = 1; /* FIXME: this is soooo ugly, don't do this */
-	}
-
-	xform = xmms_xform_new (NULL, NULL, medialib , 0, stream_type_goals);
+	xform = xmms_xform_new (NULL, NULL, manager, stream_type_goals);
 
 	durl = g_strdup (url);
 
@@ -145,10 +190,9 @@ chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry,
 	last = xform;
 
 	do {
-		xform = xmms_xform_find (last, entry, stream_type_goals);
+		xform = xmms_xform_find (last, manager, stream_type_goals);
 		if (!xform) {
-			xmms_log_error ("Couldn't set up chain for '%s' (%d)",
-			                url, entry);
+			xmms_log_error ("Couldn't set up chain for '%s'", url);
 			xmms_object_unref (last);
 
 			return NULL;
@@ -162,6 +206,7 @@ chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry,
 	return last;
 }
 
+/*
 static void
 chain_finalize (xmms_medialib_session_t *session,
                 xmms_xform_t *xform, xmms_medialib_entry_t entry,
@@ -176,6 +221,7 @@ chain_finalize (xmms_medialib_session_t *session,
 
 	g_string_free (namestr, TRUE);
 }
+*/
 
 static gchar *
 get_url_for_entry (xmms_medialib_session_t *session, xmms_medialib_entry_t entry)
@@ -240,7 +286,9 @@ xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib,
 	gboolean add_segment = FALSE;
 	gint priority;
 
-	last = chain_setup (medialib, entry, url, stream_type_goals);
+	xmms_xform_token_manager_t *manager = xmms_xform_token_manager_new (medialib);
+
+	last = chain_setup (manager, url, stream_type_goals);
 	if (!last) {
 		return NULL;
 	}
@@ -260,7 +308,7 @@ xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib,
 
 	/* add segment plugin to the chain if it can be added */
 	if (add_segment) {
-		last = xmms_xform_new_effect (last, medialib, entry, stream_type_goals, "segment");
+		last = xmms_xform_new_effect (last, manager, stream_type_goals, "segment");
 		if (!last) {
 			return NULL;
 		}
@@ -268,13 +316,13 @@ xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib,
 
 	/* if not rehashing, also initialize all the effect plugins */
 	if (!rehash) {
-		last = add_effects (last, medialib, entry, stream_type_goals);
+		last = add_effects (last, manager, stream_type_goals);
 		if (!last) {
 			return NULL;
 		}
 	}
 
-	chain_finalize (session, last, entry, url, rehash);
+	//chain_finalize (session, last, entry, url, rehash);
 	return last;
 }
 
@@ -298,8 +346,8 @@ xmms_xform_chain_setup_url (xmms_medialib_t *medialib,
 }
 
 static xmms_xform_t *
-add_effects (xmms_xform_t *last, xmms_medialib_t *medialib,
-             xmms_medialib_entry_t entry, GPtrArray *stream_type_goals)
+add_effects (xmms_xform_t *last, xmms_xform_token_manager_t *manager,
+             GPtrArray *stream_type_goals)
 {
 	gint effect_no;
 
@@ -321,16 +369,15 @@ add_effects (xmms_xform_t *last, xmms_medialib_t *medialib,
 			continue;
 		}
 
-		last = xmms_xform_new_effect (last, medialib, entry, stream_type_goals, name);
+		last = xmms_xform_new_effect (last, manager, stream_type_goals, name);
 	}
 
 	return last;
 }
 
 static xmms_xform_t *
-xmms_xform_new_effect (xmms_xform_t *last, xmms_medialib_t *medialib,
-                       xmms_medialib_entry_t entry, GPtrArray *stream_type_goals,
-                       const gchar *name)
+xmms_xform_new_effect (xmms_xform_t *last, xmms_xform_token_manager_t *manager,
+                       GPtrArray *stream_type_goals, const gchar *name)
 {
 	xmms_plugin_t *plugin;
 	xmms_xform_plugin_t *xform_plugin;
@@ -351,8 +398,7 @@ xmms_xform_new_effect (xmms_xform_t *last, xmms_medialib_t *medialib,
 		return last;
 	}
 
-	xform = xmms_xform_new (xform_plugin, last, medialib, entry, stream_type_goals);
-
+	xform = xmms_xform_new (xform_plugin, last, manager, stream_type_goals);
 	if (xform) {
 		xmms_object_unref (last);
 		last = xform;

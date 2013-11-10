@@ -21,10 +21,11 @@
 #include <xmmspriv/xmms_medialib.h>
 #include <xmmspriv/xmms_streamtype.h>
 #include <xmmspriv/xmms_plugin.h>
+#include <xmmspriv/xmms_tokenmanager.h>
 
 #define xmms_xform_find_plugin(name) (xmms_xform_plugin_t *) xmms_plugin_find (XMMS_PLUGIN_TYPE_XFORM, name)
 
-xmms_xform_t *xmms_xform_new (xmms_xform_plugin_t *plugin, xmms_xform_t *prev, xmms_medialib_t *medialib, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals);
+xmms_xform_t *xmms_xform_new (xmms_xform_plugin_t *plugin, xmms_xform_t *prev, xmms_xform_token_manager_t *manager, GPtrArray *stream_type_goals);
 const gchar *xmms_xform_outtype_get_str (xmms_xform_t *xform, xmms_stream_type_key_t key);
 gint xmms_xform_outtype_get_int (xmms_xform_t *xform, xmms_stream_type_key_t key);
 xmms_stream_type_t *xmms_xform_outtype_get (xmms_xform_t *xform);
@@ -33,9 +34,7 @@ xmms_plugin_t *xmms_xform_plugin_new (void);
 gboolean xmms_xform_plugin_verify (xmms_plugin_t *plugin);
 
 /* TODO: Remove me */
-void xmms_xform_metadata_collect (xmms_medialib_session_t *session, xmms_xform_t *start, GString *namestr, gboolean rehashing);
-/* TODO: Remove me */
-xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals);
+xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_xform_token_manager_t *manager, GPtrArray *stream_type_goals);
 
 xmms_xform_t *xmms_xform_chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
 xmms_xform_t *xmms_xform_chain_setup_session (xmms_medialib_t *medialib, xmms_medialib_session_t *session, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
@@ -43,7 +42,7 @@ xmms_xform_t *xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib, xmm
 xmms_xform_t *xmms_xform_chain_setup_url (xmms_medialib_t *medialib, xmms_medialib_entry_t entry, const gchar *url, GPtrArray *stream_type_goals, gboolean rehash);
 
 gint64 xmms_xform_this_seek (xmms_xform_t *xform, gint64 offset, xmms_xform_seek_mode_t whence, xmms_error_t *err);
-int xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, int siz, xmms_error_t *err);
+int xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, int siz, xmms_xform_token_t *token, xmms_error_t *err);
 gboolean xmms_xform_iseos (xmms_xform_t *xform);
 
 GPtrArray *xmms_xform_stream_type_goals (xmms_xform_t *xform);
