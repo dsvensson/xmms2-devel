@@ -241,7 +241,6 @@ xmms_stream_type_coerce (const xmms_stream_type_t *in, const GList *goal_types)
 {
 	xmms_stream_type_t *best = NULL;
 	const GList *on;
-/*	gint bestscore = GINT_MAX;*/
 	gint bestscore = 100000;
 	gint format, samplerate, channels;
 	gint gformat, gsamplerate, gchannels;
@@ -336,27 +335,6 @@ xmms_stream_type_coerce (const xmms_stream_type_t *in, const GList *goal_types)
 
 	return best;
 }
-
-
-
-/*
-	XMMS_DBG ("Looking for xform with intypes matching:");
-	for (n = prev->out_types; n; n = g_list_next (n)) {
-		xmms_stream_type_val_t *val = n->data;
-		switch (val->type) {
-		case INT:
-			XMMS_DBG (" - %d = %d", val->key, val->d.num);
-			break;
-		case STRING:
-			XMMS_DBG (" - %d = '%s'", val->key, val->d.string);
-			break;
-		default:
-			XMMS_DBG (" - ????");
-			break;
-		}
-	}
-
-*/
 
 xmms_stream_type_t *
 xmms_stream_type_new (const gchar *begin, ...)
