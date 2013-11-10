@@ -253,7 +253,7 @@ void xmms_xform_outdata_type_copy (xmms_xform_t *xform) XMMS_PUBLIC;
  * @param val
  * @return TRUE if the key now maps to the suggested value, otherwise FALSE.
  */
-gboolean xmms_xform_metadata_set_int (xmms_xform_t *xform, const gchar *key, int val) XMMS_PUBLIC;
+gboolean xmms_xform_metadata_set_int (xmms_xform_t *xform, const gchar *key, int64_t val) XMMS_PUBLIC;
 /**
  * Set string metadata for the media transformed by this xform.
  *
@@ -266,7 +266,7 @@ gboolean xmms_xform_metadata_set_str (xmms_xform_t *xform, const gchar *key, con
 
 gboolean xmms_xform_metadata_has_val (xmms_xform_t *xform, const gchar *key) XMMS_PUBLIC;
 gboolean xmms_xform_metadata_get_int (xmms_xform_t *xform, const gchar *key, gint *val) XMMS_PUBLIC;
-gboolean xmms_xform_metadata_get_str (xmms_xform_t *xform, const gchar *key, const gchar **val) XMMS_PUBLIC;
+gboolean xmms_xform_metadata_get_str (xmms_xform_t *xform, const gchar *key, gchar **val) XMMS_PUBLIC;
 
 /**
  * Set numeric metadata for the media by parsing a string value.
@@ -402,7 +402,6 @@ xmms_config_property_t *xmms_xform_config_lookup (xmms_xform_t *xform, const gch
  * @param xform
  * @returns
  */
-xmms_medialib_entry_t xmms_xform_entry_get (xmms_xform_t *xform) XMMS_PUBLIC;
 const gchar *xmms_xform_get_url (xmms_xform_t *xform) XMMS_PUBLIC;
 
 #define XMMS_XFORM_BROWSE_FLAG_DIR (1 << 0)

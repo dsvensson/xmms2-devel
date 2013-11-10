@@ -121,7 +121,7 @@ static gboolean
 xmms_metadata_test_xform_init (xmms_xform_t *xform)
 {
 	const gchar *musicbrainz_va_id = "89ad4ac3-39f7-470e-963a-56509c546377";
-	const gchar *title, *rpgain;
+	gchar *title, *rpgain;
 	gint track, totaltracks, compilation;
 
 	CU_ASSERT_FALSE (xmms_xform_metadata_mapper_match (xform, "missing", "missing", -1));
@@ -130,6 +130,7 @@ xmms_metadata_test_xform_init (xmms_xform_t *xform)
 	CU_ASSERT_TRUE (xmms_xform_metadata_mapper_match (xform, "title", "the title", -1));
 	CU_ASSERT_TRUE (xmms_xform_metadata_get_str (xform, XMMS_MEDIALIB_ENTRY_PROPERTY_TITLE, &title));
 	CU_ASSERT_STRING_EQUAL ("the title", title);
+	g_free (title);
 
 	/* Mapping track number, without total tracks */
 	CU_ASSERT_TRUE (xmms_xform_metadata_mapper_match (xform, "tracknr", "1", -1));
@@ -162,9 +163,11 @@ xmms_metadata_test_xform_init (xmms_xform_t *xform)
 	CU_ASSERT_TRUE (xmms_xform_metadata_mapper_match (xform, "replaygain_track_gain", "-14.69", -1));
 	CU_ASSERT_TRUE (xmms_xform_metadata_get_str (xform, XMMS_MEDIALIB_ENTRY_PROPERTY_GAIN_TRACK, &rpgain));
 	CU_ASSERT_STRING_EQUAL ("0.18428", rpgain);
+	g_free (rpgain);
 	CU_ASSERT_TRUE (xmms_xform_metadata_mapper_match (xform, "replaygain_track_gain", "-14.69 dB", -1));
 	CU_ASSERT_TRUE (xmms_xform_metadata_get_str (xform, XMMS_MEDIALIB_ENTRY_PROPERTY_GAIN_TRACK, &rpgain));
 	CU_ASSERT_STRING_EQUAL ("0.18428", rpgain);
+	g_free (rpgain);
 
 
 	CU_ASSERT_TRUE (xmms_xform_metadata_mapper_match (xform, "coverart", "test", 10));
@@ -249,6 +252,11 @@ XMMS_XFORM_BUILTIN_DEFINE (browse_test_xform,
                            "browse test xform",
                            xmms_browse_test_xform_plugin_setup);
 
+#define POS(x) x
+#define IS_DIR 1
+#define IS_FILE 0
+#define SIZE(x) x
+
 #define CU_ASSERT_BROWSE_ENTRY(list, pos, path, isdir, size) do { \
 		xmmsv_t *entry;                                         \
 		const gchar *_path;                                     \
@@ -279,11 +287,11 @@ CASE(test_browse)
 	CU_ASSERT_TRUE (xmmsv_is_type (result, XMMSV_TYPE_LIST));
 	CU_ASSERT_TRUE (xmmsv_list_restrict_type (result, XMMSV_TYPE_DICT));
 	CU_ASSERT_EQUAL (6, xmmsv_list_get_size (result));
-	CU_ASSERT_BROWSE_ENTRY (result, 0, "file:///Directory1", 1, 0);
-	CU_ASSERT_BROWSE_ENTRY (result, 1, "file:///Directory2", 1, 0);
-	CU_ASSERT_BROWSE_ENTRY (result, 2, "file:///file01.mp3", 0, 1);
-	CU_ASSERT_BROWSE_ENTRY (result, 3, "file:///file02.mp3", 0, 2);
-	CU_ASSERT_BROWSE_ENTRY (result, 4, "file:///file03.mp3", 0, 3);
-	CU_ASSERT_BROWSE_ENTRY (result, 5, "file:///Last_Directory", 1, 0);
+	CU_ASSERT_BROWSE_ENTRY (result, POS (1), "file:///Directory2", IS_DIR, SIZE (0));
+	CU_ASSERT_BROWSE_ENTRY (result, POS (0), "file:///Directory1", IS_DIR, SIZE (0));
+	CU_ASSERT_BROWSE_ENTRY (result, POS (2), "file:///file01.mp3", IS_FILE, SIZE (1));
+	CU_ASSERT_BROWSE_ENTRY (result, POS (3), "file:///file02.mp3", IS_FILE, SIZE (2));
+	CU_ASSERT_BROWSE_ENTRY (result, POS (4), "file:///file03.mp3", IS_FILE, SIZE (3));
+	CU_ASSERT_BROWSE_ENTRY (result, POS (5), "file:///Last_Directory", IS_DIR, SIZE (0));
 	xmmsv_unref (result);
 }
