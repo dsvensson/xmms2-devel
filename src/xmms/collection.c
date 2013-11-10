@@ -237,10 +237,10 @@ xmms_collection_client_idlist_from_playlist (xmms_coll_dag_t *dag,
 	xmmsv_list_iter_t *it;
 	const gchar* src;
 
-	stream_type = _xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
-	                                     XMMS_STREAM_TYPE_MIMETYPE,
-	                                     "application/x-xmms2-playlist-entries",
-	                                     XMMS_STREAM_TYPE_END);
+	stream_type = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                                    XMMS_STREAM_TYPE_MIMETYPE,
+	                                    "application/x-xmms2-playlist-entries",
+	                                    XMMS_STREAM_TYPE_END);
 	stream_types = g_list_prepend (NULL, stream_type);
 
 	/* we don't want any effects for playlist, so just report we're rehashing */

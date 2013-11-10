@@ -327,12 +327,12 @@ xmms_stream_type_coerce (const xmms_stream_type_t *in, const GList *goal_types)
 		gsamplerate = samplerate;
 	}
 
-	best = _xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
-	                              XMMS_STREAM_TYPE_MIMETYPE, gmime,
-	                              XMMS_STREAM_TYPE_FMT_FORMAT, gformat,
-	                              XMMS_STREAM_TYPE_FMT_CHANNELS, gchannels,
-	                              XMMS_STREAM_TYPE_FMT_SAMPLERATE, gsamplerate,
-	                              XMMS_STREAM_TYPE_END);
+	best = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                             XMMS_STREAM_TYPE_MIMETYPE, gmime,
+	                             XMMS_STREAM_TYPE_FMT_FORMAT, gformat,
+	                             XMMS_STREAM_TYPE_FMT_CHANNELS, gchannels,
+	                             XMMS_STREAM_TYPE_FMT_SAMPLERATE, gsamplerate,
+	                             XMMS_STREAM_TYPE_END);
 
 	return best;
 }
@@ -359,7 +359,7 @@ xmms_stream_type_coerce (const xmms_stream_type_t *in, const GList *goal_types)
 */
 
 xmms_stream_type_t *
-_xmms_stream_type_new (const gchar *begin, ...)
+xmms_stream_type_new (const gchar *begin, ...)
 {
 	xmms_stream_type_t *res;
 	va_list ap;
