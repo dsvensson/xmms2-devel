@@ -181,10 +181,10 @@ CASE(test_xform_metadata)
 	xmms_xform_t *xform;
 	GList *goal_format;
 
-	format = _xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
-	                                XMMS_STREAM_TYPE_MIMETYPE,
-	                                "audio/pcm",
-	                                XMMS_STREAM_TYPE_END);
+	format = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                               XMMS_STREAM_TYPE_MIMETYPE,
+	                               "audio/pcm",
+	                               XMMS_STREAM_TYPE_END);
 	goal_format = g_list_prepend (NULL, format);
 
 	xmms_plugin_load (&xmms_builtin_metadata_test_xform, NULL);
