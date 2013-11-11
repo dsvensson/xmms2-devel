@@ -39,12 +39,14 @@ xmms_converter_plugin_init (xmms_xform_t *xform)
 	xmms_sample_converter_t *conv;
 	xmms_stream_type_t *intype;
 	xmms_stream_type_t *to;
-	const GList *goal_hints;
+	GPtrArray *stream_type_goals;
 
 	intype = xmms_xform_intype_get (xform);
-	goal_hints = xmms_xform_stream_type_goals (xform);
 
-	to = xmms_stream_type_coerce (intype, goal_hints);
+	stream_type_goals = xmms_xform_stream_type_goals (xform);
+	to = xmms_stream_type_coerce (intype, stream_type_goals);
+	g_ptr_array_unref (stream_type_goals);
+
 	if (!to) {
 		return FALSE;
 	}

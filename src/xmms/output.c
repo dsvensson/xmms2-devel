@@ -77,8 +77,6 @@ static xmmsv_t *xmms_volume_map_to_dict (xmms_volume_map_t *vl);
 static gboolean xmms_output_status_set (xmms_output_t *output, gint status);
 static gboolean set_plugin (xmms_output_t *output, xmms_output_plugin_t *plugin);
 
-static void xmms_output_format_list_free_elem (gpointer data, gpointer user_data);
-static void xmms_output_format_list_clear (xmms_output_t *output);
 xmms_medialib_entry_t xmms_output_current_id (xmms_output_t *output);
 
 #include "output_ipc.c"
@@ -134,7 +132,7 @@ struct xmms_output_St {
 	xmms_medialib_t *medialib;
 
 	/** Supported formats */
-	GList *format_list;
+	GPtrArray *supported_stream_types;
 	/** Active format */
 	xmms_stream_type_t *format;
 
@@ -180,42 +178,16 @@ xmms_output_private_data_set (xmms_output_t *output, gpointer data)
 void
 xmms_output_stream_type_add (xmms_output_t *output, ...)
 {
-	xmms_stream_type_t *f;
+	xmms_stream_type_t *stream_type;
 	va_list ap;
 
 	va_start (ap, output);
-	f = xmms_stream_type_parse (ap);
+	stream_type = xmms_stream_type_parse (ap);
 	va_end (ap);
 
-	g_return_if_fail (f);
+	g_return_if_fail (stream_type);
 
-	output->format_list = g_list_append (output->format_list, f);
-}
-
-static void
-xmms_output_format_list_free_elem (gpointer data, gpointer user_data)
-{
-	xmms_stream_type_t *f;
-
-	g_return_if_fail (data);
-
-	f = data;
-
-	xmms_object_unref (f);
-}
-
-static void
-xmms_output_format_list_clear(xmms_output_t *output)
-{
-	if (output->format_list == NULL)
-		return;
-
-	g_list_foreach (output->format_list,
-	                xmms_output_format_list_free_elem,
-	                NULL);
-
-	g_list_free (output->format_list);
-	output->format_list = NULL;
+	g_ptr_array_add (output->supported_stream_types, stream_type);
 }
 
 static void
@@ -442,7 +414,7 @@ xmms_output_filler (void *arg)
 				continue;
 			}
 
-			chain = xmms_xform_chain_setup (output->medialib, entry, output->format_list, FALSE);
+			chain = xmms_xform_chain_setup (output->medialib, entry, output->supported_stream_types, FALSE);
 			if (!chain) {
 				xmms_medialib_session_t *session;
 
@@ -871,7 +843,8 @@ xmms_output_destroy (xmms_object_t *object)
 		xmms_output_plugin_method_destroy (output->plugin, output);
 		xmms_object_unref (output->plugin);
 	}
-	xmms_output_format_list_clear (output);
+
+	g_ptr_array_unref (output->supported_stream_types);
 
 	xmms_object_unref (output->playlist);
 	xmms_object_unref (output->medialib);
@@ -946,6 +919,8 @@ xmms_output_new (xmms_output_plugin_t *plugin, xmms_playlist_t *playlist, xmms_m
 
 	xmms_object_ref (medialib);
 	output->medialib = medialib;
+
+	output->supported_stream_types = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
 
 	g_mutex_init (&output->status_mutex);
 	g_mutex_init (&output->playtime_mutex);
@@ -1050,7 +1025,9 @@ set_plugin (xmms_output_t *output, xmms_output_plugin_t *plugin)
 		xmms_output_plugin_method_destroy (output->plugin, output);
 		output->plugin = NULL;
 	}
-	xmms_output_format_list_clear (output);
+
+	g_ptr_array_remove_range (output->supported_stream_types,
+	                          0, output->supported_stream_types->len);
 
 	/* output->plugin needs to be set before we can call the
 	 * NEW method
