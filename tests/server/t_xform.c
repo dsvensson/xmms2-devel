@@ -176,28 +176,29 @@ xmms_metadata_test_xform_init (xmms_xform_t *xform)
 
 CASE(test_xform_metadata)
 {
+	GPtrArray *stream_type_goals;
+	xmms_stream_type_t *stream_type;
 	xmms_medialib_session_t *session;
-	xmms_stream_type_t *format;
 	xmms_xform_t *xform;
-	GList *goal_format;
 
-	format = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
-	                               XMMS_STREAM_TYPE_MIMETYPE,
-	                               "audio/pcm",
-	                               XMMS_STREAM_TYPE_END);
-	goal_format = g_list_prepend (NULL, format);
+	stream_type = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                                    XMMS_STREAM_TYPE_MIMETYPE,
+	                                    "audio/pcm",
+	                                    XMMS_STREAM_TYPE_END);
+
+	stream_type_goals = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
+	g_ptr_array_add (stream_type_goals, stream_type);
 
 	xmms_plugin_load (&xmms_builtin_metadata_test_xform, NULL);
 
 	session = xmms_medialib_session_begin (medialib);
 	xform = xmms_xform_chain_setup_url_session (medialib, session, 1,
-	                                            "metadatatest://", goal_format,
-	                                            TRUE);
+	                                            "metadatatest://",
+	                                            stream_type_goals, TRUE);
 	xmms_medialib_session_abort (session);
 	xmms_object_unref (xform);
 
-	g_list_free (goal_format);
-	xmms_object_unref (format);
+	g_ptr_array_unref (stream_type_goals);
 }
 
 static gboolean

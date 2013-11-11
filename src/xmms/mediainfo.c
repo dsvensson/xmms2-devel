@@ -26,6 +26,7 @@
 
 #include <xmms/xmms_log.h>
 #include <xmms/xmms_ipc.h>
+#include <xmms/xmms_object.h>
 #include <xmmspriv/xmms_mediainfo.h>
 #include <xmmspriv/xmms_medialib.h>
 #include <xmmspriv/xmms_xform.h>
@@ -152,9 +153,9 @@ xmms_mediainfo_reader_wakeup (xmms_mediainfo_reader_t *mr)
 static gpointer
 xmms_mediainfo_reader_thread (gpointer data)
 {
-	GList *goal_format;
+	xmms_stream_type_t *stream_type;
+	GPtrArray *stream_type_goals;
 	GTimeVal timeval;
-	xmms_stream_type_t *f;
 	guint num = 0;
 
 	xmms_mediainfo_reader_t *mrt = (xmms_mediainfo_reader_t *) data;
@@ -163,11 +164,12 @@ xmms_mediainfo_reader_thread (gpointer data)
 	                  XMMS_IPC_SIGNAL_MEDIAINFO_READER_STATUS,
 	                  xmmsv_new_int (XMMS_MEDIAINFO_READER_STATUS_RUNNING));
 
-	f = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
-	                          XMMS_STREAM_TYPE_MIMETYPE,
-	                          "audio/pcm",
-	                          XMMS_STREAM_TYPE_END);
-	goal_format = g_list_prepend (NULL, f);
+	stream_type = xmms_stream_type_new (XMMS_STREAM_TYPE_BEGIN,
+	                                    XMMS_STREAM_TYPE_MIMETYPE, "audio/pcm",
+	                                    XMMS_STREAM_TYPE_END);
+
+	stream_type_goals = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
+	g_ptr_array_add (stream_type_goals, stream_type);
 
 	while (mrt->running) {
 		xmmsc_medialib_entry_status_t prev_status;
@@ -210,7 +212,7 @@ xmms_mediainfo_reader_thread (gpointer data)
 		}
 
 		xform = xmms_xform_chain_setup_session (mrt->medialib, session, entry,
-		                                        goal_format, TRUE);
+		                                        stream_type_goals, TRUE);
 
 		if (!xform) {
 			if (prev_status == XMMS_MEDIALIB_ENTRY_STATUS_NEW) {
@@ -230,8 +232,7 @@ xmms_mediainfo_reader_thread (gpointer data)
 		xmms_medialib_session_commit (session);
 	}
 
-	g_list_free (goal_format);
-	xmms_object_unref (f);
+	g_ptr_array_unref (stream_type_goals);
 
 	return NULL;
 }

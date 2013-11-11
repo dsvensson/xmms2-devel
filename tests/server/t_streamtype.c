@@ -255,17 +255,12 @@ CASE (test_nomatch3)
 
 }
 
-static void
-destroy_list (gpointer data, gpointer user_data)
-{
-	xmms_object_t *obj = (xmms_object_t *) data;
-	xmms_object_unref (obj);
-}
-
 CASE (test_coerce)
 {
 	xmms_stream_type_t *typ, *from, *to = NULL;
-	GList *list = NULL;
+	GPtrArray *stream_type_goals;
+
+	stream_type_goals = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
 
 	from = xmms_stream_type_new ("dummy",
 	                             XMMS_STREAM_TYPE_URL, "test://",
@@ -281,7 +276,7 @@ CASE (test_coerce)
 	                            XMMS_STREAM_TYPE_FMT_FORMAT, XMMS_SAMPLE_FORMAT_S32,
 	                            XMMS_STREAM_TYPE_FMT_CHANNELS, 1,
 	                            XMMS_STREAM_TYPE_END);
-	list = g_list_append (list, typ);
+	g_ptr_array_add (stream_type_goals, typ);
 
 	typ = xmms_stream_type_new ("dummy",
 	                            XMMS_STREAM_TYPE_URL, "test://",
@@ -289,9 +284,9 @@ CASE (test_coerce)
 	                            XMMS_STREAM_TYPE_FMT_FORMAT, XMMS_SAMPLE_FORMAT_S32,
 	                            XMMS_STREAM_TYPE_FMT_CHANNELS, 2,
 	                            XMMS_STREAM_TYPE_END);
-	list = g_list_append (list, typ);
+	g_ptr_array_add (stream_type_goals, typ);
 
-	to = xmms_stream_type_coerce (from, list);
+	to = xmms_stream_type_coerce (from, stream_type_goals);
 	CU_ASSERT_PTR_NOT_NULL (to);
 
 	CU_ASSERT_EQUAL (XMMS_SAMPLE_FORMAT_S32,
@@ -301,9 +296,7 @@ CASE (test_coerce)
 	CU_ASSERT_EQUAL (2,
 	                 xmms_stream_type_get_int (to, XMMS_STREAM_TYPE_FMT_CHANNELS));
 
-	g_list_foreach (list, destroy_list, NULL);
-	g_list_free (list);
-
+	g_ptr_array_unref (stream_type_goals);
 	xmms_object_unref (from);
 	xmms_object_unref (to);
 }
