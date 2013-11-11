@@ -91,6 +91,7 @@ void xmms_object_cmd_add (xmms_object_t *object, guint cmdid, const xmms_object_
 
 void xmms_object_cmd_call (xmms_object_t *object, guint cmdid, xmms_object_cmd_arg_t *arg);
 
+void xmms_object_destroy_notify (gpointer data);
 
 void __int_xmms_object_unref (xmms_object_t *object) XMMS_PUBLIC;
 xmms_object_t *__int_xmms_object_new (gint size, xmms_object_destroy_func_t destfunc) XMMS_PUBLIC;

@@ -358,3 +358,9 @@ __int_xmms_object_new (gint size, xmms_object_destroy_func_t destfunc)
 
 	return ret;
 }
+
+void
+xmms_object_destroy_notify (gpointer data)
+{
+	xmms_object_unref (data);
+}
