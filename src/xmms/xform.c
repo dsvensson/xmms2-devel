@@ -93,6 +93,7 @@ xmms_xform_directory_listing_trampoline_new (const gchar *url)
 	                             XMMS_STREAM_TYPE_MIMETYPE, "application/x-url",
 	                             XMMS_STREAM_TYPE_URL, url,
 	                             XMMS_STREAM_TYPE_END);
+
 	return xform;
 }
 
@@ -395,7 +396,7 @@ xmms_xform_new (xmms_xform_plugin_t *plugin, xmms_xform_t *prev,
 
 	xform->inited = TRUE;
 
-	g_return_val_if_fail (xform->out_type, NULL);
+	//g_return_val_if_fail (xform->out_type, NULL);
 
 	xform->buffer = g_malloc (READ_CHUNK);
 	xform->buffersize = READ_CHUNK;

@@ -36,10 +36,7 @@ gboolean xmms_xform_plugin_verify (xmms_plugin_t *plugin);
 /* TODO: Remove me */
 xmms_xform_t *xmms_xform_find (xmms_xform_t *prev, xmms_xform_token_manager_t *manager, GPtrArray *stream_type_goals);
 
-xmms_xform_t *xmms_xform_chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
-xmms_xform_t *xmms_xform_chain_setup_session (xmms_medialib_t *medialib, xmms_medialib_session_t *session, xmms_medialib_entry_t entry, GPtrArray *stream_type_goals, gboolean rehash);
-xmms_xform_t *xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib, xmms_medialib_session_t *session, xmms_medialib_entry_t entry, const gchar *url, GPtrArray *stream_type_goals, gboolean rehash);
-xmms_xform_t *xmms_xform_chain_setup_url (xmms_medialib_t *medialib, xmms_medialib_entry_t entry, const gchar *url, GPtrArray *stream_type_goals, gboolean rehash);
+xmms_xform_t *xmms_xform_chain_new (xmms_xform_token_manager_t *manager, GPtrArray *stream_type_goals);
 
 gint64 xmms_xform_this_seek (xmms_xform_t *xform, gint64 offset, xmms_xform_seek_mode_t whence, xmms_error_t *err);
 int xmms_xform_this_read (xmms_xform_t *xform, gpointer buf, int siz, xmms_xform_token_t *token, xmms_error_t *err);

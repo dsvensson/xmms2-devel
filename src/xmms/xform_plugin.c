@@ -75,6 +75,7 @@ xmms_xform_plugin_verify (xmms_plugin_t *_plugin)
 
 	g_return_val_if_fail (plugin, FALSE);
 	g_return_val_if_fail (plugin->plugin.type == XMMS_PLUGIN_TYPE_XFORM, FALSE);
+	g_return_val_if_fail (plugin->methods.init != NULL, FALSE);
 
 	/* more checks */
 
@@ -263,4 +264,3 @@ xmms_xform_plugin_destroy (const xmms_xform_plugin_t *plugin, xmms_xform_t *xfor
 {
 	plugin->methods.destroy (xform);
 }
-

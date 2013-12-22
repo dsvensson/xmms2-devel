@@ -49,6 +49,9 @@ gint xmms_medialib_entry_property_get_int (xmms_medialib_session_t *s, xmms_medi
 gchar *xmms_medialib_entry_property_get_str (xmms_medialib_session_t *s, xmms_medialib_entry_t entry, const gchar *property);
 xmmsv_t *xmms_medialib_entry_property_get_value (xmms_medialib_session_t *s, xmms_medialib_entry_t entry, const gchar *property);
 
+typedef void (*xmms_medialib_entry_property_foreach_func_t) (const char *source, const char *key, xmmsv_t *value, void *udata);
+void xmms_medialib_entry_property_foreach (xmms_medialib_session_t *session, xmms_medialib_entry_t entry, xmms_medialib_entry_property_foreach_func_t func, void *udata);
+
 gboolean xmms_medialib_entry_property_set_int (xmms_medialib_session_t *s, xmms_medialib_entry_t entry, const gchar *property, gint value);
 gboolean xmms_medialib_entry_property_set_str (xmms_medialib_session_t *s, xmms_medialib_entry_t entry, const gchar *property, const gchar *value);
 gboolean xmms_medialib_entry_property_set_int_source (xmms_medialib_session_t *s, xmms_medialib_entry_t entry, const gchar *property, gint value, const gchar *source);

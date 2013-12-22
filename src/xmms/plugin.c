@@ -65,7 +65,7 @@ static gboolean xmms_plugin_scan_directory (const gchar *dir);
  */
 
 /**
- * @internal 
+ * @internal
  * Lookup the value of a plugin's config property, given the property key.
  * @param[in] plugin The plugin
  * @param[in] key The property key (config path)
@@ -90,7 +90,7 @@ xmms_plugin_config_lookup (xmms_plugin_t *plugin,
 }
 
 /**
- * @internal 
+ * @internal
  * Register a config property for a plugin.
  * @param[in] plugin The plugin
  * @param[in] name The property name

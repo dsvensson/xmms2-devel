@@ -32,7 +32,7 @@ static void xmms_xform_effect_properties_update (xmms_object_t *object, xmmsv_t 
 #include "xform_ipc.c"
 
 xmms_xform_object_t *
-xmms_xform_object_init ()
+xmms_xform_object_init (void)
 {
 	xmms_xform_object_t *obj;
 

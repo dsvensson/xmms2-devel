@@ -102,8 +102,8 @@ xmms_mediainfo_reader_start (xmms_medialib_t *medialib)
 }
 
 /**
-  * Kill the mediainfo reader thread
-  */
+ * Kill the mediainfo reader thread
+ */
 static void
 xmms_mediainfo_reader_stop (xmms_object_t *o)
 {
@@ -153,12 +153,15 @@ xmms_mediainfo_reader_wakeup (xmms_mediainfo_reader_t *mr)
 static gpointer
 xmms_mediainfo_reader_thread (gpointer data)
 {
+	xmms_xform_token_manager_t *manager;
 	xmms_stream_type_t *stream_type;
 	GPtrArray *stream_type_goals;
 	GTimeVal timeval;
 	guint num = 0;
 
 	xmms_mediainfo_reader_t *mrt = (xmms_mediainfo_reader_t *) data;
+
+	manager = xmms_xform_token_manager_new (mrt->medialib);
 
 	xmms_object_emit (XMMS_OBJECT (mrt),
 	                  XMMS_IPC_SIGNAL_MEDIAINFO_READER_STATUS,
@@ -211,8 +214,9 @@ xmms_mediainfo_reader_thread (gpointer data)
 			num--;
 		}
 
-		xform = xmms_xform_chain_setup_session (mrt->medialib, session, entry,
-		                                        stream_type_goals, TRUE);
+		xmms_xform_token_manager_reset (manager, session, entry);
+
+		xform = xmms_xform_chain_new (manager, stream_type_goals);
 
 		if (!xform) {
 			if (prev_status == XMMS_MEDIALIB_ENTRY_STATUS_NEW) {
@@ -224,6 +228,7 @@ xmms_mediainfo_reader_thread (gpointer data)
 		} else {
 			xmms_object_unref (xform);
 			g_get_current_time (&timeval);
+			/* TODO: token manager react */
 
 			xmms_medialib_entry_property_set_int (session, entry,
 			                                      XMMS_MEDIALIB_ENTRY_PROPERTY_ADDED,

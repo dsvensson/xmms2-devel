@@ -923,9 +923,10 @@ xmms_medialib_client_get_id (xmms_medialib_t *medialib, const gchar *url,
 }
 
 static void
-xmms_medialib_tree_add_tuple (xmmsv_t *dict, const char *key,
-                              const char *source, xmmsv_t *value)
+xmms_medialib_tree_add_tuple (const char *source, const char *key,
+                              xmmsv_t *value, void *udata)
 {
+	xmmsv_t *dict = (xmmsv_t *) udata;
 	xmmsv_t *entry;
 
 	if (key == NULL || source == NULL || value == NULL) {
@@ -949,14 +950,16 @@ xmms_medialib_tree_add_tuple (xmmsv_t *dict, const char *key,
  *
  * @param session The medialib session to be used for the transaction.
  * @param entry Entry to convert.
+ * @param func
  *
  * @returns Newly allocated tree with newly allocated strings
  * make sure to free them all.
  */
-
-static xmmsv_t *
-xmms_medialib_entry_to_tree (xmms_medialib_session_t *session,
-                             xmms_medialib_entry_t entry)
+void
+xmms_medialib_entry_property_foreach (xmms_medialib_session_t *session,
+                                      xmms_medialib_entry_t entry,
+                                      xmms_medialib_entry_property_foreach_func_t func,
+                                      void *udata)
 {
 	s4_resultset_t *set;
 	s4_val_t *song_id;
@@ -967,8 +970,6 @@ xmms_medialib_entry_to_tree (xmms_medialib_session_t *session,
 	set = xmms_medialib_filter (session, "song_id", song_id, S4_COND_PARENT,
 	                            NULL, NULL, S4_FETCH_PARENT | S4_FETCH_DATA);
 	s4_val_free (song_id);
-
-	ret = xmmsv_new_dict ();
 
 	for (i = 0; i < s4_resultset_get_rowcount (set); i++) {
 		const s4_result_t *res;
@@ -987,8 +988,8 @@ xmms_medialib_entry_to_tree (xmms_medialib_session_t *session,
 				v_entry = xmmsv_new_int (i);
 			}
 
-			xmms_medialib_tree_add_tuple (ret, s4_result_get_key (res),
-			                              s4_result_get_src (res), v_entry);
+			func (s4_result_get_src (res), s4_result_get_key (res), v_entry, udata);
+
 			xmmsv_unref (v_entry);
 
 			res = s4_result_next (res);
@@ -1010,12 +1011,18 @@ xmms_medialib_client_get_info (xmms_medialib_t *medialib,
                                xmms_error_t *err)
 {
 	xmms_medialib_session_t *session;
-	xmmsv_t *ret = NULL;
+	xmmsv_t *ret = xmmsv_new_dict ();
+
+	xmmsv_t *v_entry = xmmsv_new_int (entry);
+	xmms_medialib_tree_add_tuple ("id", "server", v_entry, ret);
+	xmmsv_unref (v_entry);
 
 	do {
 		session = xmms_medialib_session_begin_ro (medialib);
 		if (xmms_medialib_check_id (session, entry)) {
-			ret = xmms_medialib_entry_to_tree (session, entry);
+			xmms_medialib_entry_property_foreach (session, entry,
+			                                      xmms_medialib_tree_add_tuple,
+			                                      ret);
 		} else {
 			xmms_error_set (err, XMMS_ERROR_NOENT, "No such entry");
 		}

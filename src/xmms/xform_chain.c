@@ -223,70 +223,18 @@ chain_finalize (xmms_medialib_session_t *session,
 }
 */
 
-static gchar *
-get_url_for_entry (xmms_medialib_session_t *session, xmms_medialib_entry_t entry)
-{
-	gchar *url = NULL;
-
-	url = xmms_medialib_entry_property_get_str (session, entry, XMMS_MEDIALIB_ENTRY_PROPERTY_URL);
-
-	if (!url) {
-		xmms_log_error ("Couldn't get url for entry (%d)", entry);
-	}
-
-	return url;
-}
-
 xmms_xform_t *
-xmms_xform_chain_setup (xmms_medialib_t *medialib, xmms_medialib_entry_t entry,
-                        GPtrArray *stream_type_goals, gboolean rehash)
-{
-	xmms_medialib_session_t *session;
-	xmms_xform_t *ret = NULL;
-
-	do {
-		session = xmms_medialib_session_begin (medialib);
-		if (ret != NULL)
-			xmms_object_unref (ret);
-		ret = xmms_xform_chain_setup_session (medialib, session, entry, stream_type_goals, rehash);
-	} while (!xmms_medialib_session_commit (session));
-
-	return ret;
-}
-
-xmms_xform_t *
-xmms_xform_chain_setup_session (xmms_medialib_t *medialib,
-                                xmms_medialib_session_t *session,
-                                xmms_medialib_entry_t entry,
-                                GPtrArray *stream_type_goals, gboolean rehash)
-{
-	gchar *url;
-	xmms_xform_t *xform;
-
-	if (!(url = get_url_for_entry (session, entry))) {
-		return NULL;
-	}
-
-	xform = xmms_xform_chain_setup_url_session (medialib, session, entry,
-	                                            url, stream_type_goals, rehash);
-	g_free (url);
-
-	return xform;
-}
-
-xmms_xform_t *
-xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib,
-                                    xmms_medialib_session_t *session,
-                                    xmms_medialib_entry_t entry, const gchar *url,
-                                    GPtrArray *stream_type_goals, gboolean rehash)
+xmms_xform_chain_new (xmms_xform_token_manager_t *manager,
+                      GPtrArray *stream_type_goals)
 {
 	xmms_xform_t *last;
 	xmms_plugin_t *plugin;
 	xmms_xform_plugin_t *xform_plugin;
 	gboolean add_segment = FALSE;
 	gint priority;
+	gchar *url;
 
-	xmms_xform_token_manager_t *manager = xmms_xform_token_manager_new (medialib);
+	xmms_xform_token_manager_get_string (manager, "server", "url", &url);
 
 	last = chain_setup (manager, url, stream_type_goals);
 	if (!last) {
@@ -314,35 +262,8 @@ xmms_xform_chain_setup_url_session (xmms_medialib_t *medialib,
 		}
 	}
 
-	/* if not rehashing, also initialize all the effect plugins */
-	if (!rehash) {
-		last = add_effects (last, manager, stream_type_goals);
-		if (!last) {
-			return NULL;
-		}
-	}
-
 	//chain_finalize (session, last, entry, url, rehash);
 	return last;
-}
-
-xmms_xform_t *
-xmms_xform_chain_setup_url (xmms_medialib_t *medialib,
-                            xmms_medialib_entry_t entry, const gchar *url,
-                            GPtrArray *stream_type_goals, gboolean rehash)
-{
-	xmms_medialib_session_t *session;
-	xmms_xform_t *ret = NULL;
-
-	do {
-		session = xmms_medialib_session_begin (medialib);
-		if (ret != NULL)
-			xmms_object_unref (ret);
-		ret = xmms_xform_chain_setup_url_session (medialib, session, entry, url,
-		                                          stream_type_goals, rehash);
-	} while (!xmms_medialib_session_commit (session));
-
-	return ret;
 }
 
 static xmms_xform_t *
@@ -353,8 +274,8 @@ add_effects (xmms_xform_t *last, xmms_xform_token_manager_t *manager,
 
 	for (effect_no = 0; TRUE; effect_no++) {
 		xmms_config_property_t *cfg;
-		gchar key[64];
 		const gchar *name;
+		gchar key[64];
 
 		g_snprintf (key, sizeof (key), "effect.order.%i", effect_no);
 
@@ -364,7 +285,6 @@ add_effects (xmms_xform_t *last, xmms_xform_token_manager_t *manager,
 		}
 
 		name = xmms_config_property_get_string (cfg);
-
 		if (!name[0]) {
 			continue;
 		}

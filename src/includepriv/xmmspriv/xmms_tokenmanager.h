@@ -30,12 +30,15 @@ typedef enum {
 xmms_xform_token_manager_t *xmms_xform_token_manager_new (xmms_medialib_t *medialib);
 void xmms_xform_token_manager_free (xmms_xform_token_manager_t *manager);
 
+void xmms_xform_token_manager_reset (xmms_xform_token_manager_t *manager, xmms_medialib_session_t *session, xmms_medialib_entry_t entry);
+
 gboolean xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager, xmms_xform_token_t token);
 
 gboolean xmms_xform_token_manager_has_value (xmms_xform_token_manager_t *manager, xmms_xform_token_t token, guint8 order, const gchar *source, const gchar *key);
 gboolean xmms_xform_token_manager_get_int (xmms_xform_token_manager_t *manager, xmms_xform_token_t token, guint8 order, const gchar *source, const gchar *key, int64_t *value);
 gboolean xmms_xform_token_manager_get_string (xmms_xform_token_manager_t *manager, xmms_xform_token_t token, guint8 order, const gchar *source, const gchar *key, gchar **value);
 
+xmms_xform_token_t xmms_xform_token_manager_set_value (xmms_xform_token_manager_t *manager, guint8 order, const gchar *source, const gchar *key, xmmsv_t *value, xmms_xform_metadata_lifetime_t lifetime);
 xmms_xform_token_t xmms_xform_token_manager_set_int (xmms_xform_token_manager_t *manager, guint8 order, const gchar *source, const gchar *key, int64_t value, xmms_xform_metadata_lifetime_t lifetime);
 xmms_xform_token_t xmms_xform_token_manager_set_string (xmms_xform_token_manager_t *manager, guint8 order, const gchar *source, const gchar *key, const gchar *value, xmms_xform_metadata_lifetime_t lifetime);
 

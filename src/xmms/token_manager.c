@@ -21,6 +21,7 @@
 
 #include <xmms/xmms_log.h>
 #include <xmms/xmms_object.h>
+#include <xmmspriv/xmms_medialib.h>
 
 #include <xmmspriv/xmms_tokenmanager.h>
 
@@ -65,10 +66,12 @@ xmms_xform_token_manager_new (xmms_medialib_t *medialib)
 	return manager;
 }
 
-void
-xmms_xform_token_manager_free (xmms_xform_token_manager_t *manager)
+static void
+xmms_xform_token_manager_clear (xmms_xform_token_manager_t *manager)
 {
 	xmms_xform_token_node_t *node, *next;
+
+	g_mutex_lock (&manager->lock);
 
 	node = manager->head;
 	while (node != NULL) {
@@ -82,10 +85,39 @@ xmms_xform_token_manager_free (xmms_xform_token_manager_t *manager)
 		node = next;
 	}
 
+	manager->head = manager->cursor = manager->persistent_cursor = NULL;
+
+	g_mutex_unlock (&manager->lock);
+}
+
+static void
+xmms_xform_token_manager_add_origin (const gchar *source, const gchar *key,
+                                     xmmsv_t *value, void *udata)
+{
+	xmms_xform_token_manager_t *manager = (xmms_xform_token_manager_t *) udata;
+	xmms_xform_token_manager_set_value (manager, 0, source, key, value,
+	                                    XMMS_XFORM_METADATA_LIFETIME_ORIGIN);
+}
+
+void
+xmms_xform_token_manager_reset (xmms_xform_token_manager_t *manager,
+                                xmms_medialib_session_t *session,
+                                xmms_medialib_entry_t entry)
+{
+	xmms_xform_token_manager_clear (manager);
+	xmms_xform_token_manager_set_int (manager, 0, "server", "id", entry,
+	                                  XMMS_XFORM_METADATA_LIFETIME_ORIGIN);
+	xmms_medialib_entry_property_foreach (session, entry,
+	                                      xmms_xform_token_manager_add_origin,
+	                                      manager);
+}
+
+void
+xmms_xform_token_manager_free (xmms_xform_token_manager_t *manager)
+{
+	xmms_xform_token_manager_clear (manager);
 	xmms_object_unref (manager->medialib);
-
 	g_mutex_clear (&manager->lock);
-
 	g_free (manager);
 }
 
@@ -115,12 +147,13 @@ add_if_missing (xmmsv_t *key_dict, const gchar *source,
 static void
 xmms_xform_token_manager_compress (xmms_xform_token_manager_t *manager)
 {
-	/* TODO: Implement me. */
+	/* TODO: Implement me. Needed? */
 }
 
 static gboolean
 xmms_xform_token_manager_persist (xmms_xform_token_manager_t *manager, xmmsv_t *persist)
 {
+	/* TODO: should this really be implemented here? */
 	return TRUE;
 }
 
@@ -163,11 +196,13 @@ xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager,
 				XMMS_DBG ("[%s] %s = %lld", node->source, node->key, n);
 
 			if (node->value_lifetime == XMMS_XFORM_METADATA_LIFETIME_VOLATILE) {
+				/* TODO: Implement me? */
 			}
 		}
 
-		if (node->value_lifetime == XMMS_XFORM_METADATA_LIFETIME_PERSISTENT)
+		if (node->value_lifetime == XMMS_XFORM_METADATA_LIFETIME_PERSISTENT) {
 			add_if_missing (persist, node->key, node->source, node->value);
+		}
 	}
 
 	if (next)
@@ -184,7 +219,7 @@ xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager,
 	return result;
 }
 
-static xmms_xform_token_t
+xmms_xform_token_t
 xmms_xform_token_manager_set_value (xmms_xform_token_manager_t *manager,
                                     guint8 order, const gchar *source,
                                     const gchar *key, xmmsv_t *value,
@@ -229,6 +264,7 @@ xmms_xform_token_manager_set_string (xmms_xform_token_manager_t *manager,
                                      const gchar *key, const gchar *value,
                                      xmms_xform_metadata_lifetime_t lifetime)
 {
+	/* TODO: Could check if string has already been set, if so, avoid alloc */
 	return xmms_xform_token_manager_set_value (manager, order, source, key,
 	                                           xmmsv_new_string (value),
 	                                           lifetime);
