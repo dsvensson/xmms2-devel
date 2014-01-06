@@ -234,7 +234,7 @@ xmms_xform_chain_new (xmms_xform_token_manager_t *manager,
 	gint priority;
 	gchar *url;
 
-	xmms_xform_token_manager_get_string (manager, "server", "url", &url);
+	xmms_xform_token_manager_get_string (manager, 0, 0, "server", "url", &url);
 
 	last = chain_setup (manager, url, stream_type_goals);
 	if (!last) {

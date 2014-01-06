@@ -342,6 +342,7 @@ xmms_output_filler (void *arg)
 {
 	xmms_output_t *output = (xmms_output_t *)arg;
 	xmms_xform_t *chain = NULL;
+	xmms_xform_token_manager_t *manager;
 	xmms_xform_token_t last_token, token;
 	gboolean last_was_kill = FALSE;
 	char buf[4096];
@@ -404,6 +405,7 @@ xmms_output_filler (void *arg)
 		}
 
 		if (!chain) {
+			xmms_medialib_session_t *session;
 			xmms_medialib_entry_t entry;
 			xmms_output_song_changed_arg_t *hsarg;
 
@@ -417,10 +419,14 @@ xmms_output_filler (void *arg)
 				continue;
 			}
 
-			chain = xmms_xform_chain_setup (output->medialib, entry, output->supported_stream_types, FALSE);
-			if (!chain) {
-				xmms_medialib_session_t *session;
+			manager = xmms_xform_token_manager_new (output->medialib);
+			do {
+				session = xmms_medialib_session_begin (output->medialib);
+				xmms_xform_token_manager_reset (manager, session, entry);
+			} while (!xmms_medialib_session_commit (session));
 
+			chain = xmms_xform_chain_new (manager, output->supported_stream_types);
+			if (!chain) {
 				do {
 					session = xmms_medialib_session_begin (output->medialib);
 					if (xmms_medialib_entry_property_get_int (session, entry, XMMS_MEDIALIB_ENTRY_PROPERTY_STATUS) == XMMS_MEDIALIB_ENTRY_STATUS_NEW) {

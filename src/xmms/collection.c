@@ -230,9 +230,10 @@ xmms_collection_client_idlist_from_playlist (xmms_coll_dag_t *dag,
                                              const gchar *path,
                                              xmms_error_t *err)
 {
+	xmms_xform_token_manager_t *manager;
 	xmms_stream_type_t *stream_type;
 	xmms_xform_t *xform;
-	GList *stream_types;
+	GPtrArray *stream_type_goals;
 	xmmsv_t *dict, *list, *coll;
 	xmmsv_list_iter_t *it;
 	const gchar* src;
@@ -241,11 +242,14 @@ xmms_collection_client_idlist_from_playlist (xmms_coll_dag_t *dag,
 	                                    XMMS_STREAM_TYPE_MIMETYPE,
 	                                    "application/x-xmms2-playlist-entries",
 	                                    XMMS_STREAM_TYPE_END);
-	stream_types = g_list_prepend (NULL, stream_type);
 
-	/* we don't want any effects for playlist, so just report we're rehashing */
-	xform = xmms_xform_chain_setup_url (dag->medialib, 0, path, stream_types, TRUE);
+	stream_type_goals = g_ptr_array_new_with_free_func (xmms_object_destroy_notify);
+	g_ptr_array_add (stream_type_goals, stream_type);
 
+	manager = xmms_xform_token_manager_new (dag->medialib);
+	xmms_xform_token_manager_set_origin_string (manager, "server", "url", path);
+
+	xform = xmms_xform_chain_new (manager, stream_type_goals);
 	if (!xform) {
 		xmms_error_set (err, XMMS_ERROR_NO_SAUSAGE, "We can't handle this type of playlist or URL");
 		return NULL;
@@ -303,7 +307,7 @@ xmms_collection_client_idlist_from_playlist (xmms_coll_dag_t *dag,
 
 	xmms_object_unref (xform);
 	xmms_object_unref (stream_type);
-	g_list_free (stream_types);
+	g_ptr_array_unref (stream_type_goals);
 
 	return coll;
 }
