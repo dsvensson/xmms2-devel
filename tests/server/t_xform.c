@@ -181,9 +181,11 @@ CASE(test_xform_metadata)
 {
 	xmms_xform_token_manager_t *manager;
 	xmms_medialib_session_t *session;
+	xmms_medialib_entry_t entry;
 	xmms_stream_type_t *stream_type;
 	GPtrArray *stream_type_goals;
 	xmms_xform_t *xform;
+	xmms_error_t err;
 
 	manager = xmms_xform_token_manager_new (medialib);
 
@@ -198,12 +200,18 @@ CASE(test_xform_metadata)
 	xmms_plugin_load (&xmms_builtin_metadata_test_xform, NULL);
 
 	session = xmms_medialib_session_begin (medialib);
-	manager = xmms_xform_token_manager_new (medialib);
-	xmms_xform_token_manager_reset (manager, session, 1);
-	xform = xmms_xform_chain_new (manager, stream_type_goals);
-	xmms_medialib_session_abort (session);
-	xmms_object_unref (xform);
+	entry = xmms_medialib_entry_new_encoded (session, "metadatatest:///url", &err);
+	xmms_medialib_session_commit (session);
 
+	session = xmms_medialib_session_begin_ro (medialib);
+	xmms_xform_token_manager_reset (manager, session, entry);
+	xform = xmms_xform_chain_new (manager, stream_type_goals);
+	xmms_medialib_session_commit (session);
+
+	xmms_xform_token_manager_react (manager, 0);
+
+	xmms_object_unref (xform);
+	xmms_xform_token_manager_free (manager);
 	g_ptr_array_unref (stream_type_goals);
 }
 

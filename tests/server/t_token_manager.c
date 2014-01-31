@@ -142,3 +142,24 @@ CASE (test_order)
 	                                                  "key1", &number));
 	CU_ASSERT_EQUAL (1, number);
 }
+
+CASE (test_url_and_arg_decoding)
+{
+	xmms_medialib_session_t *session;
+	xmms_medialib_entry_t entry;
+	xmms_error_t err;
+	const gchar *string;
+
+	session = xmms_medialib_session_begin (medialib);
+	entry = xmms_medialib_entry_new_encoded (session, "file:///test/test.sid?subtune=9", &err);
+	xmms_medialib_session_commit (session);
+
+	session = xmms_medialib_session_begin_ro (medialib);
+	xmms_xform_token_manager_reset (mgr, session, entry);
+	xmms_medialib_session_commit (session);
+
+	CU_ASSERT_TRUE (xmms_xform_token_manager_get_string (mgr, 0,
+	                                                     42, "server",
+	                                                     "subtune", &string));
+	CU_ASSERT_STRING_EQUAL ("9", string);
+}

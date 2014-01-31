@@ -145,47 +145,15 @@ outdata_type_metadata_collect (xmms_xform_t *xform)
 	}
 }
 
+xmms_xform_t *xmms_xform_directory_listing_trampoline_new (const gchar *url);
+
+
 static xmms_xform_t *
-chain_setup (xmms_xform_token_manager_t *manager, const gchar *url,
-             GPtrArray *stream_type_goals)
+chain_setup (xmms_xform_token_manager_t *manager, const gchar *url, GPtrArray *stream_type_goals)
 {
 	xmms_xform_t *xform, *last;
-	gchar *durl, *args;
 
-	xform = xmms_xform_new (NULL, NULL, manager, stream_type_goals);
-
-	durl = g_strdup (url);
-
-	args = strchr (durl, '?');
-	if (args) {
-		gchar **params;
-		gint i;
-		*args = 0;
-		args++;
-		xmms_medialib_decode_url (args);
-
-		params = g_strsplit (args, "&", 0);
-
-		for (i = 0; params && params[i]; i++) {
-			gchar *v;
-			v = strchr (params[i], '=');
-			if (v) {
-				*v = 0;
-				v++;
-				xmms_xform_metadata_set_str (xform, params[i], v);
-			} else {
-				xmms_xform_metadata_set_int (xform, params[i], 1);
-			}
-		}
-		g_strfreev (params);
-	}
-	xmms_medialib_decode_url (durl);
-
-	xmms_xform_outdata_type_add (xform, XMMS_STREAM_TYPE_MIMETYPE,
-	                             "application/x-url", XMMS_STREAM_TYPE_URL,
-	                             durl, XMMS_STREAM_TYPE_END);
-
-	g_free (durl);
+	xform = xmms_xform_directory_listing_trampoline_new (url);
 
 	last = xform;
 
@@ -235,8 +203,9 @@ xmms_xform_chain_new (xmms_xform_token_manager_t *manager,
 	gchar *url;
 
 	xmms_xform_token_manager_get_string (manager, 0, 0, "server", "url", &url);
-
 	last = chain_setup (manager, url, stream_type_goals);
+	g_free (url);
+
 	if (!last) {
 		return NULL;
 	}

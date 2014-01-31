@@ -25,6 +25,8 @@
 
 #include <xmmspriv/xmms_tokenmanager.h>
 
+#include <string.h>
+
 typedef struct xmms_xform_token_node_St xmms_xform_token_node_t;
 
 #define ORIGIN_TOKEN 0
@@ -91,12 +93,72 @@ xmms_xform_token_manager_clear (xmms_xform_token_manager_t *manager)
 }
 
 static void
+xmms_xform_token_manager_parse_argument (xmms_xform_token_manager_t *manager,
+                                         gchar *param)
+{
+	gchar *v = strchr (param, '=');
+	if (v) {
+		*v = 0;
+		v++;
+		xmms_xform_token_manager_set_origin_string (manager, "server",
+		                                            param, v);
+	} else {
+		xmms_xform_token_manager_set_origin_int (manager, "server",
+		                                         param, 1);
+	}
+}
+
+static void
+xmms_xform_token_manager_parse_url (xmms_xform_token_manager_t *manager,
+                                    xmmsv_t *value)
+{
+	const gchar *url;
+	gchar *durl, *args, **params;
+	gint i;
+
+	if (!xmmsv_get_string (value, &url))
+		return;
+
+	durl = g_strdup (url);
+
+	args = strchr (durl, '?');
+	if (args) {
+		*args = 0;
+		args++;
+
+		if (!xmms_medialib_decode_url (args))
+			goto cleanup;
+
+		params = g_strsplit (args, "&", 0);
+		for (i = 0; params[i]; i++)
+			xmms_xform_token_manager_parse_argument (manager, params[i]);
+		g_strfreev (params);
+	}
+
+	if (!xmms_medialib_decode_url (durl))
+		goto cleanup;
+
+	xmms_xform_token_manager_set_origin_string (manager, "server",
+	                                            "url", durl);
+cleanup:
+	g_free (durl);
+}
+
+
+static void
 xmms_xform_token_manager_add_origin (const gchar *source, const gchar *key,
                                      xmmsv_t *value, void *udata)
 {
 	xmms_xform_token_manager_t *manager = (xmms_xform_token_manager_t *) udata;
-	xmms_xform_token_manager_set_value (manager, 0, source, key, value,
-	                                    XMMS_XFORM_METADATA_LIFETIME_ORIGIN);
+	if (!source)
+		return; /* XXX: This is song_id which is the S4 internal attribute set without source, wrong place to handle */
+
+	if (g_strcmp0 ("url", key) == 0) /* need special care to decode and handle args */ {
+		xmms_xform_token_manager_parse_url (manager, value);
+	}
+	else
+		xmms_xform_token_manager_set_value (manager, 0, source, key, xmmsv_ref (value),
+		                                    XMMS_XFORM_METADATA_LIFETIME_ORIGIN);
 }
 
 void
@@ -122,14 +184,17 @@ xmms_xform_token_manager_free (xmms_xform_token_manager_t *manager)
 }
 
 static gboolean
-add_if_missing (xmmsv_t *key_dict, const gchar *source,
+add_if_missing (xmmsv_t **key_dict, const gchar *source,
                 const gchar *key, xmmsv_t *value)
 {
 	xmmsv_t *source_dict;
 
-	if (!xmmsv_dict_get (key_dict, key, &source_dict)) {
+	if (!*key_dict)
+		*key_dict = xmmsv_new_dict ();
+
+	if (!xmmsv_dict_get (*key_dict, key, &source_dict)) {
 		source_dict = xmmsv_new_dict ();
-		xmmsv_dict_set (key_dict, source, source_dict);
+		xmmsv_dict_set (*key_dict, source, source_dict);
 		xmmsv_unref (source_dict);
 	}
 
@@ -168,9 +233,11 @@ xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager,
                                 xmms_xform_token_t token)
 {
 	xmms_xform_token_node_t *node, *next;
-	xmmsv_t *current_info = xmmsv_new_dict ();
-	xmmsv_t *persist = xmmsv_new_dict ();
+	xmmsv_t *current_info;
+	xmmsv_t *persist;
 	gboolean result = FALSE;
+
+	current_info = persist = NULL;
 
 	g_mutex_lock (&manager->lock);
 
@@ -178,15 +245,15 @@ xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager,
 	 * of the previous run.
 	 */
 	for (node = manager->head; node && node != manager->cursor; node = node->prev) {
-		if (node->token > token)
-			continue;
+		if (node->token >= token)
+			break;
 	}
 
 	next = node;
 
 	/* Collect metadata between cursor and selected node */
 	for (; node && node != manager->cursor; node = node->prev) {
-		if (add_if_missing (current_info, node->key, node->source, node->value)) {
+		if (add_if_missing (&current_info, node->key, node->source, node->value)) {
 			const gchar *s;
 			int64_t n;
 
@@ -201,20 +268,24 @@ xmms_xform_token_manager_react (xmms_xform_token_manager_t *manager,
 		}
 
 		if (node->value_lifetime == XMMS_XFORM_METADATA_LIFETIME_PERSISTENT) {
-			add_if_missing (persist, node->key, node->source, node->value);
+			add_if_missing (&persist, node->key, node->source, node->value);
 		}
 	}
 
 	if (next)
 		manager->cursor = next;
 
-	result = xmms_xform_token_manager_persist (manager, persist);
-	xmms_xform_token_manager_compress (manager);
+	if (persist) {
+		result = xmms_xform_token_manager_persist (manager, persist);
+		xmms_xform_token_manager_compress (manager);
+	}
 
 	g_mutex_unlock (&manager->lock);
 
-	xmmsv_unref (persist);
-	xmmsv_unref (current_info);
+	if (persist)
+		xmmsv_unref (persist);
+	if (current_info)
+		xmmsv_unref (current_info);
 
 	return result;
 }
@@ -281,10 +352,11 @@ xmms_xform_token_manager_get_value (xmms_xform_token_manager_t *manager,
 	gboolean result = FALSE;
 
 	for (node = manager->head; node; node = node->prev) {
-		/* A source may access origin data of its own source type regardless order. */
+		/* A source may access origin data of its own source or "server" regardless order. */
 		if (node->token == ORIGIN_TOKEN) {
 			if (g_strcmp0 (node->source, source) != 0)
-				continue;
+				if (g_strcmp0 (node->source, "server") != 0)
+					continue;
 		} else {
 			/* Token of metadata must be older or equal to passed token. */
 			if (node->token > token)

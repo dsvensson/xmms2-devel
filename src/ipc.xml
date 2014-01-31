@@ -819,6 +819,20 @@ vim:expandtab
             </return_value>
         </method>
 
+
+        <method>
+          <name>current_info</name>
+          <documentation>Retrieves the current_info of the song that's currently being played.</documentation>
+
+          <return_value>
+            <documentation>The ID of the song that's currently being played.</documentation>
+
+            <type>
+              <int />
+            </type>
+          </return_value>
+        </method>
+
         <method>
             <name>volume_set</name>
             <documentation>Changes the volume for the given channel.</documentation>

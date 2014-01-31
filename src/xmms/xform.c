@@ -81,8 +81,16 @@ typedef struct xmms_xform_hotspot_St {
 
 const char *xmms_xform_shortname (xmms_xform_t *xform);
 static void xmms_xform_destroy (xmms_object_t *object);
+xmms_xform_t *xmms_xform_directory_listing_trampoline_new (const gchar *url);
 
-static xmms_xform_t *
+static void
+xmms_xform_apply_url_args (xmms_xform_t *xform, const gchar *url)
+{
+
+}
+
+
+xmms_xform_t *
 xmms_xform_directory_listing_trampoline_new (const gchar *url)
 {
 	xmms_xform_t *xform;
