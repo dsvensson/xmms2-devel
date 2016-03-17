@@ -127,6 +127,12 @@ function linux_build_analysis {
     (cat Doxyfile && echo "HTML_FOOTER=/tmp/footer.html") | doxygen -
     (cd src/clients/lib/xmmsclient && (cat Doxyfile && echo "HTML_FOOTER=/tmp/footer.html") | doxygen -)
 
+    # Generate ruby bindings docs, strip timestamps
+    git clone https://github.com/rdoc/rdoc.git
+    (gem install hoe kpeg racc json && cd rdoc && git reset --hard v4.2.2-12-g3f1ae6a && rake package && cd pkg && gem install --local *.gem)
+    rdoc src/clients/lib/ruby/*.{c,rb} -o doc/ruby
+    find doc/ruby \( -name 'created.rid' -or -name '*.gz' \) -delete
+
     if [[ -n $CI_USER_TOKEN ]]; then
         function github_docs_clone {
             git clone https://$CI_USER_TOKEN@github.com/xmms2/docs.git github-docs
@@ -141,6 +147,7 @@ function linux_build_analysis {
         mkdir github-docs/api
         mv doc/xmms2/html github-docs/api/xmms2
         mv doc/xmmsclient/html github-docs/api/xmmsclient
+        mv doc/ruby github-docs/api/ruby
 
         cd github-docs
         git add clang api
