@@ -9,11 +9,13 @@ import ast
 import os
 import sys
 import subprocess
+import re
 
 try:
     sys.path.remove(os.path.dirname(os.path.abspath(__file__)))
     import xmmsclient
     import xmmsclient.collections
+    import xmmsclient.service
 except:
     print("Set PYTHONPATH to a path containing xmmsclient.")
     raise SystemExit
@@ -22,55 +24,79 @@ def write_xmmsapi(filename):
     with open(filename, "w") as dst:
         dst.write("xmmsclient\n")
         dst.write("----------\n")
-        dst.write("See `samples` on how to connect and interact with the server.\n\n")
-        dst.write("Classes\n")
+        dst.write(".. py:module:: xmmsclient\n")
+        dst.write("\nFunctions\n")
+        dst.write("^^^^^^^^^\n")
+        dst.write(".. py:function:: %s\n" % xmmsclient.userconfdir_get.__doc__)
+        dst.write("\nClasses\n")
         dst.write("^^^^^^^\n")
-        dst.write(".. autoclass:: xmmsclient.Xmms\n\n")
         dst.write(".. autoclass:: xmmsclient.XmmsSync\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsCore\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsApi\n")
+        dst.write(".. autoclass:: xmmsclient.XmmsLoop\n")
+        dst.write(".. py:class:: %s\n\n" % xmmsclient.xmmsapi.XmmsCore.__doc__.replace("Core", ""))
+        entries = xmmsclient.Xmms.__dict__.items() + xmmsclient.xmmsapi.XmmsCore.__dict__.items()
+        for name, func in sorted(entries):
+            if type(func).__name__ in ('getset_descriptor'):
+                dst.write("   .. py:attribute:: %s\n" % name)
+        for name, func in sorted(entries):
+            if name.startswith("_"):
+                continue
+            if type(func).__name__ in ('method_descriptor', 'cython_function_or_method'):
+                docstring = func.__doc__.replace("XmmsApi.", "").replace("XmmsCore.", "")
+                match = re.findall("-> (.+)", docstring, re.MULTILINE)
+                if match:
+                    docstring = re.sub(" -> (.+)", "", docstring, re.MULTILINE)
+                    docstring += "\n\n\t\t:rtype: %s\n" % match[0]
+                dst.write("   .. py:method:: %s\n" % docstring)
+        #dst.write(".. autoclass:: xmmsclient.Xmms\n\n")
+        #dst.write(".. autoclass:: xmmsclient.XmmsSync\n")
+        #dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsCore\n")
+        #dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsApi\n")
         dst.write(".. autoclass:: xmmsclient.XmmsValue\n")
         dst.write(".. autoclass:: xmmsclient.XmmsValueC2C\n")
         dst.write(".. autoclass:: xmmsclient.XmmsLoop\n")
         dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsResult\n")
         dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsVisChunk\n")
-        dst.write("Exceptions\n")
+        dst.write("\nExceptions\n")
         dst.write("^^^^^^^^^^\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsvalue.XmmsError\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsapi.VisualizationError\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsDisconnectException\n")
+        dst.write(".. autoexception:: xmmsclient.xmmsvalue.XmmsError\n")
+        dst.write(".. autoexception:: xmmsclient.xmmsapi.VisualizationError\n")
+        dst.write(".. autoexception:: xmmsclient.xmmsapi.XmmsDisconnectException\n")
 
 def write_service_clients(filename):
     with open(filename, "w") as dst:
         dst.write("xmmsclient.service\n")
         dst.write("------------------\n\n")
         dst.write("See `samples` on how to register and/or consume service clients.\n\n")
-        dst.write("Classes\n")
+        dst.write("\nClasses\n")
         dst.write("^^^^^^^\n")
         dst.write(".. autoclass:: xmmsclient.service.XmmsServiceClient\n")
-        dst.write(".. autoclass:: xmmsclient.xmmsapi.XmmsServiceNamespace\n")
+        dst.write(".. autoclass:: xmmsclient.service.XmmsServiceNamespace\n")
         dst.write("   :no-members:\n\n")
-        dst.write("   .. automethod:: xmmsclient.xmmsapi.XmmsServiceNamespace.register\n")
-        dst.write("Decorators\n")
+        dst.write("   .. py:method: xmmsclient.service.XmmsServiceNamespace.register()\n")
+        dst.write(".. py:class:: xmmsclient.service.%s\n" %
+                  xmmsclient.service.method_arg.__init__.__doc__.replace(".__init__", "").replace("self, ", ""))
+        dst.write(".. py:class:: xmmsclient.service.%s\n" %
+                  xmmsclient.service.method_varg.__init__.__doc__.replace(".__init__", "").replace("self, ", ""))
+        dst.write(".. py:class:: xmmsclient.service.%s\n" %
+                  xmmsclient.service.service_constant.__init__.__doc__.replace(".__init__", "").replace("self, ", ""))
+        dst.write(".. py:class:: xmmsclient.service.%s\n" %
+                  xmmsclient.service.service_broadcast.__doc__)
+        dst.write("\nDecorators\n")
         dst.write("^^^^^^^^^^\n")
-        dst.write(".. py:decorator:: xmmsclient.service.method_arg\n")
-        dst.write(".. py:decorator:: xmmsclient.service.method_varg\n")
-        dst.write(".. py:decorator:: xmmsclient.service.service_method\n")
-        dst.write(".. py:decorator:: xmmsclient.service.service_broadcast\n")
-        dst.write(".. py:decorator:: xmmsclient.service.service_constant\n")
-        dst.write(".. py:decorator:: xmmsclient.service.client_broadcast\n")
-        dst.write(".. py:decorator:: xmmsclient.service.client_method\n")
+        dst.write(".. py:decorator:: xmmsclient.service.%s\n" %
+                  xmmsclient.service.service_method.__init__.im_func.func_doc.replace(".__init__", ""))
+
 
 def write_constants(filename):
     with open(xmmsclient.consts.__file__) as src, open(filename, "w") as dst:
         class ConstsDocumenter(ast.NodeVisitor):
             def visit_ImportFrom(self, node):
                 for name in node.names:
-                    dst.write(".. autoattribute:: xmmsclient.consts.%s\n" % name.name)
-        dst.write("xmmsclient.consts\n")
-        dst.write("-----------------\n")
+                    value = eval("xmmsclient.%s" % name.name)
+                    dst.write(".. py:data:: xmmsclient.%s\n" % name.name)
+                    dst.write("   :annotation: = %s\n\n" % value)
         dst.write("Constants\n")
-        dst.write("^^^^^^^^^\n")
+        dst.write("---------\n")
         tree = ast.parse(src.read())
         ConstsDocumenter().visit(tree)
 
@@ -80,16 +106,16 @@ def write_collections(filename):
             def visit_ImportFrom(self, node):
                 for name in node.names:
                     if name.name == "coll_parse":
-                        dst.write("Methods\n")
+                        dst.write("\nMethods\n")
                         dst.write("^^^^^^^\n")
                         dst.write(".. autofunction:: xmmsclient.collections.coll_parse\n")
                     else:
                         dst.write(".. autoclass:: xmmsclient.collections.%s\n" % name.name)
                         dst.write("   :inherited-members:\n\n")
-                        dst.write("   .. automethod:: xmmsclient.collections.%s.__init__\n" % name.name)
+                        dst.write("   .. automethod:: xmmsclient.collections.%s.__init__\n\n" % name.name)
         dst.write("xmmsclient.collections\n")
         dst.write("----------------------\n")
-        dst.write("Classes\n")
+        dst.write("\nClasses\n")
         dst.write("^^^^^^^\n")
         tree = ast.parse(src.read())
         CollectionsDocumenter().visit(tree)
@@ -99,33 +125,12 @@ def write_samples(filename, samples_dir):
         dst.write("\n")
         dst.write("Examples\n")
         dst.write("--------\n")
-        dst.write("Basic example\n")
-        dst.write("^^^^^^^^^^^^^\n")
-        dst.write(".. code-block:: python\n\n")
-        dst.write("   import xmmsclient\n")
-        dst.write("   \n")
-        dst.write("   xc = xmmsclient.XmmsSync('test-client')\n")
-        dst.write("   xc.connect()\n\n")
-        dst.write("   print(xc.stats())\n\n")
-        dst.write("Async example\n")
-        dst.write("^^^^^^^^^^^^^\n")
-        dst.write(".. code-block:: python\n\n")
-        dst.write("   import xmmsclient\n")
-        dst.write("   \n")
-        dst.write("   def handle_stats(result):\n")
-        dst.write("     print(result.value())\n")
-        dst.write("   \n")
-        dst.write("   xc = xmmsclient.XmmsLoop('test-client')\n")
-        dst.write("   xc.connect()\n")
-        dst.write("   xc.stats(cb=handle_stats)\n")
-        dst.write("   xc.loop()\n\n")
-        dst.write("Browse and track available service clients\n")
+        dst.write("\nBrowse and track available service clients\n")
         dst.write("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n")
         dst.write(".. literalinclude:: %s\n" % os.path.join(samples_dir, "scwatch.py"))
         dst.write("   :language: python\n")
-        dst.write("   :tab-width: 2\n")
-        dst.write("\n")
-        dst.write("Register a service client\n")
+        dst.write("   :tab-width: 2\n\n")
+        dst.write("\nRegister a service client\n")
         dst.write("^^^^^^^^^^^^^^^^^^^^^^^^^\n")
         dst.write(".. literalinclude:: %s\n" % os.path.join(samples_dir, "service.py"))
         dst.write("   :language: python\n")
@@ -139,9 +144,9 @@ def write_index(filename):
         dst.write(".. toctree::\n")
         dst.write("   :maxdepth: 1\n\n")
         dst.write("   xmmsapi\n")
-        dst.write("   constants\n")
         dst.write("   collections\n")
         dst.write("   serviceclients\n")
+        dst.write("   constants\n")
         dst.write("   samples\n")
 
 def write_conf(filename):
@@ -158,7 +163,7 @@ extensions = [
     'sphinx.ext.autosummary'
 ]
 
-autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance' ]
+autodoc_default_flags = ['members', 'undoc-members']
 default_role = 'any'
 """)
 

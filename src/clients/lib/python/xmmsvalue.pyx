@@ -128,7 +128,7 @@ cdef class XmmsValue:
 
 	cpdef iserror(self):
 		"""
-		:deprecated:
+		:deprecated: Use `XmmsValue.is_error` instead.
 		:return: Whether the value represents an error or not.
 		:rtype: bool
 		"""

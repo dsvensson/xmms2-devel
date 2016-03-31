@@ -232,7 +232,7 @@ cdef class XmmsResult:
 	@deprecated
 	def iserror(self):
 		"""
-		:deprecated: Use `is_error` instead.
+		:deprecated: Use `XmmsResult.is_error` instead.
 		"""
 		return self.is_error()
 
@@ -1012,13 +1012,9 @@ cdef class XmmsCore:
 		XMMS2 daemon. This path defaults to /tmp/xmms-ipc-<username> if
 		not specified. Call this once you have instantiated the object:
 
-		C{import xmmsclient}
-
-		C{xmms = xmmsclient.XMMS()}
-
-		C{xmms.connect()}
-
-		...
+		>>> import xmmsclient
+		>>> xc = xmmsclient.Xmms('clientname')
+		>>> xc.connect()
 
 		You can provide a disconnect callback function to be activated
 		when the daemon disconnects.(e.g. daemon quit) This function
@@ -1906,7 +1902,7 @@ cdef class XmmsApi(XmmsCore):
 	cpdef XmmsResult c2c_ready(self, cb = None):
 		"""
 		Notify the server that client services are ready for query.
-		This method is called XmmsServiceNamespace.register() and don't need to
+		This method is called `XmmsServiceNamespace.register()` and don't need to
 		be called explicitly.
 
 		:return: The result of the operation.
@@ -2247,6 +2243,17 @@ class XmmsDisconnectException(Exception):
 	pass
 
 cdef class XmmsLoop(XmmsApi):
+	"""
+	A simple main loop to drive async communication.
+
+	>>> import xmmsclient
+	>>> def handle_stats(result):
+	>>>   print(result.value())
+	>>> xc = xmmsclient.XmmsLoop('clientname')
+	>>> xc.connect()
+	>>> xc.stats(cb=handle_stats)
+	>>> xc.loop()
+	"""
 	#cdef bint do_loop
 	#cdef object wakeup
 
@@ -2293,7 +2300,7 @@ cdef class XmmsLoop(XmmsApi):
 		custom operations in the main loop.
 
 		:return: The tuple returned by `select.select` to be used by overridding
-		methods in subclasses.
+		         methods in subclasses.
 		"""
 		cdef int fd
 		fd = xmmsc_io_fd_get(self.conn)
