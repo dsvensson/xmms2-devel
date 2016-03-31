@@ -1000,9 +1000,9 @@ cdef class XmmsCore:
 		the XMMS2 daemon. You can use this in a client to ensure that
 		the IPC link is still active and safe to use.(e.g by calling
 		select() or poll())
-		@rtype: int
 
 		:return: IPC file descriptor
+		:rtype: int
 		"""
 		return xmmsc_io_fd_get(self.conn)
 
