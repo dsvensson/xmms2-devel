@@ -70,9 +70,8 @@ def write_service_clients(filename):
         dst.write("\nClasses\n")
         dst.write("^^^^^^^\n")
         dst.write(".. autoclass:: xmmsclient.service.XmmsServiceClient\n")
-        dst.write(".. autoclass:: xmmsclient.service.XmmsServiceNamespace\n")
-        dst.write("   :no-members:\n\n")
-        dst.write("   .. py:method: xmmsclient.service.XmmsServiceNamespace.register()\n")
+        dst.write(".. py:class:: xmmsclient.service.XmmsServiceNamespace\n")
+        dst.write("   .. py:method: register()\n\n")
         dst.write(".. py:class:: xmmsclient.service.%s\n" %
                   xmmsclient.service.method_arg.__init__.__doc__.replace(".__init__", "").replace("self, ", ""))
         dst.write(".. py:class:: xmmsclient.service.%s\n" %
