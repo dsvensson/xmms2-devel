@@ -17,6 +17,7 @@
 #include <xmmsclient/xmmsclient.h>
 #include <xmmsc/xmmsc_idnumbers.h>
 
+#include <limits.h>
 #include <ruby.h>
 #include <xmmsc/xmmsc_stdbool.h>
 
