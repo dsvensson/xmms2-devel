@@ -62,9 +62,8 @@ def build(bld):
     bld(features = 'c',
         target = 'memorystatus',
         source = ['runner/memory_status.c'],
-        includes = 'utils',
+        includes = '.. utils',
         uselib = 'valgrind DISABLE_UNUSEDBUTSETVARIABLE',
-        defines = ["HAVE_VALGRIND=%d" % int(bld.env.have_valgrind)],
         install_path = None,
     )
 

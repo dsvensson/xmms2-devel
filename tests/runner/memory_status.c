@@ -15,6 +15,7 @@
  */
 
 #include "memory_status.h"
+#include "xmms_configuration.h"
 
 #if defined(HAVE_VALGRIND) && HAVE_VALGRIND == 1
 
