@@ -105,17 +105,17 @@ xmms_segment_init (xmms_xform_t *xform)
 		stopms = (gint) strtol (nptr, &endptr, 10);
 		if (*endptr != '\0') {
 			xmms_log_info ("\"stopms\" has garbage, ignoring");
-			stopms = INT_MAX;
+			stopms = G_MAXINT32;
 		}
 	} else {
-		stopms = INT_MAX;
+		stopms = G_MAXINT32;
 	}
 
 	/* some calculation */
 	intype = xmms_xform_intype_get (xform);
 
 	startbytes = xmms_sample_ms_to_bytes (intype, startms);
-	if (stopms == INT_MAX) {
+	if (stopms == G_MAXINT32) {
 		stopbytes = G_MAXINT64;
 	} else {
 		stopbytes = xmms_sample_ms_to_bytes (intype, stopms);
