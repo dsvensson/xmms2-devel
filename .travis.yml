@@ -10,4 +10,5 @@ env:
     - secure: "lodjVMbITogvx6e+zwhwuFIIdxvVD4WIkvwbkp8ARw9qoDG+fCRe/CA/9wowjPhL/q02BYVkyZCPkkM3g722KHl9V2LSBBSBhIstSVRardXjbjZsnwX3vfL+bau04h2DkX28P35DoB+aeBrLqycqz6ToaKU/QSBk27ZfAJ2PTQo="
 
 script:
-  - docker run -v $(pwd):/source --rm xmms2/debian:stretch ./waf configure build
+  - docker run -v $(pwd):/source xmms2/debian:stretch ./waf configure
+  - docker run -v $(pwd):/source xmms2/debian:stretch ./waf build
